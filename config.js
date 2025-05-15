@@ -20,8 +20,8 @@ export default {
   consecutiveHighLatencyNotify: 5, // After how many consecutive High latency events should we send a notification
   sites: [ // List of sites to monitor
     {
-      id: 'llama-api', // optional
-      name: 'Llama Internal API',
+      id: 'internal-api', // optional
+      name: 'Internal API',
       endpoints: [ // Each site is a bunch of endpoints that can be tested
         /* {
           id: 'tvl-api2-test', // mandatory for sending notifications
@@ -58,6 +58,10 @@ export default {
 
     getIndexerApi(),
     getDimensionsApi(),
+    getStablecoinApi(),
+    getTvlApi(),
+    getCoinsApi(),
+    getYieldApi(),
   ],
 };
 
@@ -115,7 +119,7 @@ function getDimensionsApi() {
 function getIndexerApi() {
   return {
     id: 'indexer-api',
-    name: 'Llama Indexer API',
+    name: 'Indexer API',
     endpoints: [
       {
         id: 'indexer-api-sync',
@@ -124,19 +128,93 @@ function getIndexerApi() {
         url: dummyURL,
         customCheck: async () => {
           // Check if the indexer is synced
-          try {
-            const { data } = await axios.get(`${env.indexerBase}/sync`, {
-              headers: {
-                'x-api-key': env.indexerApiKey,
-              },
-            });
+          const { data } = await axios.get(`${env.indexerBase}/sync`, {
+            headers: {
+              'x-api-key': env.indexerApiKey,
+            },
+          });
 
-            return !!data.syncStatus
-          } catch (error) {
-            console.error('Error fetching indexer sync status:', error);
-            return false;
-          }
+          return !!data.syncStatus
         },
+      },
+    ],
+  }
+}
+
+function getStablecoinApi() {
+  return {
+    id: 'stablecoin-api',
+    name: 'Stablecoin API',
+    endpoints: [
+      {
+        id: 'stablecoin-api-config',
+        name: 'Config',
+        link: false,
+        url: `${env.stablecoinBase}/config`,
+      },
+      {
+        id: 'stablecoin-api-stablecoin',
+        name: 'Stablecoin data',
+        link: false,
+        url: `${env.stablecoinBase}/stablecoin/23`,
+      },
+      {
+        id: 'stablecoin-api-dominance',
+        name: 'Chain dominance',
+        link: false,
+        url: `${env.stablecoinBase}/stablecoindominance/ethereum`,
+      },
+    ],
+  }
+}
+
+function getTvlApi() {
+  return {
+    id: 'tvl-api',
+    name: 'Tvl API',
+    endpoints: [
+      {
+        id: 'tvl-api-protocols',
+        name: 'Protocols',
+        url: `${env.apiBase}/protocols`,
+      },
+      {
+        id: 'tvl-api-protocol-tvl',
+        name: 'Protocol TVL',
+        url: `${env.apiBase}/tvl/uniswap`,
+      },
+    ],
+  }
+}
+
+function getCoinsApi() {
+  return {
+    id: 'coins-api',
+    name: 'Coins API',
+    endpoints: [
+      {
+        id: 'coins-api-protocols',
+        name: 'Get token price',
+        url: `${env.coinsBase}/prices/current/coingecko:ethereum,coingecko:tether,ethereum:0x0000000000000000000000000000000000000000`,
+        customCheck: async (content) => {
+          const { coins } = JSON.parse(content);
+          const status = !['coingecko:ethereum', 'coingecko:tether', 'ethereum:0x0000000000000000000000000000000000000000'].some((coin) => !coins[coin]?.price)
+          return status
+        },
+      },
+    ],
+  }
+}
+
+function getYieldApi() {
+  return {
+    id: 'yield-api',
+    name: 'Yield API',
+    endpoints: [
+      {
+        id: 'yield-api-protocols',
+        name: 'Pools',
+        url: `https://yields.llama.fi/pools`,
       },
     ],
   }
