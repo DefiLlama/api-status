@@ -23,7 +23,7 @@ export default {
 			id: 'llama-api', // optional
 			name: 'Llama Internal API',
 			endpoints: [ // Each site is a bunch of endpoints that can be tested
-				{
+				/* {
 					id: 'tvl-api2-test', // mandatory for sending notifications
 					name: 'test',
 					// discordWebhookUrl: '...', // optional
@@ -33,7 +33,7 @@ export default {
 					customCheck: async (content, response) => {
 						return false
 					}, // optional, Function | AsyncFunction -> Run your own custom checks return false in case of errors
-				},
+				}, */
 				{
 					id: 'tvl-api2-hash', // mandatory for sending notifications
 					name: 'Tvl api2 base',
