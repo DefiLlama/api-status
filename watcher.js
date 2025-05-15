@@ -16,7 +16,7 @@ setInterval(() => {
 			console.log(`[git pull] stdout: ${stdout}`);
 		}
 	});
-}, 10 * 60 * 1000);
+}, 30 * 60 * 1000);
 
 watchFile('./config.js', async () => { // Dynamically reload config and watch it for changes.
 	try {
