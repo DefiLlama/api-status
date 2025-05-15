@@ -127,14 +127,46 @@ function getIndexerApi() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          // Check if the indexer is synced
-          const { data } = await axios.get(`${env.indexerBase}/sync`, {
-            headers: {
-              'x-api-key': env.indexerApiKey,
-            },
-          });
-
+          const payload = { headers: { 'x-api-key': env.indexerApiKey } };
+          const { data } = await axios.get(`${env.indexerBase}/sync`, payload);
           return !!data.syncStatus
+        },
+      },
+      {
+        id: 'indexer-api-balances',
+        name: 'Indexer API Balances',
+        link: false,
+        url: dummyURL,
+        customCheck: async () => {
+          const payload = {
+            headers: { 'x-api-key': env.indexerApiKey },
+            params: {
+              addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50',
+            },
+          };
+          const { data } = await axios.get(`${env.indexerBase}/balances`, payload);
+          return !!data.balances
+        },
+      },
+      {
+        id: 'indexer-api-logs',
+        name: 'Indexer API Logs',
+        link: false,
+        url: dummyURL,
+        customCheck: async () => {
+          const payload = {
+            headers: { 'x-api-key': env.indexerApiKey },
+            params: {
+              addresses: '0xbb2b8038a1640196fbe3e38816f3e67cba72d940,0xdfc14d2af169b0d36c4eff567ada9b2e0cae044f',
+              chainId: 1,
+              topic0: '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822',
+              from_block: 22018452,
+              to_block: 22019085,
+              limit: 10
+            },
+          };
+          const { data } = await axios.get(`${env.indexerBase}/logs`, payload);
+          return !!data.logs
         },
       },
     ],
