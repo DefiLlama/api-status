@@ -1,9 +1,9 @@
 import { promises as fs, watchFile } from 'fs';
-import { exec } from 'child_process';
+// import { exec } from 'child_process';
 let config = (await import('./config.js')).default;
 
 
-setInterval(() => {
+/* setInterval(() => {
 	exec('git pull', (error, stdout, stderr) => {
 		if (error) {
 			console.error(`[git pull] error: ${error.message}`);
@@ -16,7 +16,7 @@ setInterval(() => {
 			console.log(`[git pull] stdout: ${stdout}`);
 		}
 	});
-}, 30 * 60 * 1000);
+}, 30 * 60 * 1000); */
 
 watchFile('./config.js', async () => { // Dynamically reload config and watch it for changes.
 	try {
