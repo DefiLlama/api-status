@@ -216,6 +216,12 @@ function getYieldApi() {
         name: 'Pools',
         url: `https://yields.llama.fi/pools`,
       },
+      {
+        id: 'yield-api-protocol-chart',
+        name: 'Pool chart',
+        link: false,
+        url: `${env.yieldInternalBase}/chart/747c1d2a-c668-4682-b9f9-296708a3dd90`,
+      },
     ],
   }
 }

@@ -1,22 +1,7 @@
-import { promises as fs, watchFile } from 'fs';
+import { promises as fs, watchFile, existsSync, writeFileSync } from 'fs';
 // import { exec } from 'child_process';
 let config = (await import('./config.js')).default;
-
-
-/* setInterval(() => {
-	exec('git pull', (error, stdout, stderr) => {
-		if (error) {
-			console.error(`[git pull] error: ${error.message}`);
-			return;
-		}
-		if (stderr) {
-			console.error(`[git pull] stderr: ${stderr}`);
-		}
-		if (stdout) {
-			console.log(`[git pull] stdout: ${stdout}`);
-		}
-	});
-}, 30 * 60 * 1000); */
+const statusFile = './static/status.json';
 
 watchFile('./config.js', async () => { // Dynamically reload config and watch it for changes.
 	try {
@@ -27,7 +12,11 @@ watchFile('./config.js', async () => { // Dynamically reload config and watch it
 	}
 });
 
-const statusFile = './static/status.json';
+if (!existsSync(statusFile)) {
+	writeFileSync(statusFile, JSON.stringify({}), 'utf8');
+}
+
+
 let hostLink
 
 if (config.host) hostLink = `status page: ${config.host}`

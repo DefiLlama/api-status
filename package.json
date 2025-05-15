@@ -7,8 +7,7 @@
   "scripts": {
     "start-page": "npx http-server -s -d false ./static",
     "watcher": "node watcher.js",
-    "init": "node init.js",
-    "start": "npm run init && npm-run-all --parallel start-page watcher"
+    "start": "npm-run-all --parallel start-page watcher"
   },
   "author": "ybouane",
   "license": "Apache-2.0",

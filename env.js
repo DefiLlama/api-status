@@ -9,4 +9,5 @@ export default {
   indexerApiKey: process.env.LLAMA_INDEXER_API_KEY,
   defaultWebhookUrl: process.env.DEFAULT_WEBHOOK_URL,
   stablecoinBase: process.env.STABLECOIN_BASE,
+  yieldInternalBase: process.env.YIELD_INTERNAL_BASE,
 }
