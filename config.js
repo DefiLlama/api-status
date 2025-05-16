@@ -56,6 +56,7 @@ export default {
       ]
     },
 
+    getPublicSites(),
     getIndexerApi(),
     getDimensionsApi(),
     getStablecoinApi(),
@@ -253,6 +254,25 @@ function getYieldApi() {
         name: 'Pool chart',
         link: false,
         url: `${env.yieldInternalBase}/chart/747c1d2a-c668-4682-b9f9-296708a3dd90`,
+      },
+    ],
+  }
+}
+
+function getPublicSites() {
+  return {
+    id: 'public',
+    name: 'Public sites',
+    endpoints: [
+      {
+        id: 'chainlist-site',
+        name: 'Chainlist home',
+        url: `https://chainlist.org`,
+      },
+      {
+        id: 'chainlist-rpc-list',
+        name: 'Chainlist RPC list',
+        url: `https://chainlist.org/rpcs.json`,
       },
     ],
   }
