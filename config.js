@@ -1,7 +1,14 @@
-
 let env = (await import('./env.js')).default;
 import axios from 'axios';
 const dummyURL = `${env.tvl_api2_base}/hash`
+
+const createIndexerClient = (apiKey, baseURL) => axios.create({
+  headers: { "x-api-key": apiKey },
+  baseURL,
+})
+
+const axiosIndexerV2 = createIndexerClient(env.indexerApiKeyV2, env.indexerBaseV2)
+const axiosIndexerV1 = createIndexerClient(env.indexerApiKey, env.indexerBase)
 
 export default {
   host: env.host,
@@ -129,8 +136,7 @@ function getIndexerApi() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          const payload = { headers: { 'x-api-key': env.indexerApiKey } };
-          const { data } = await axios.get(`${env.indexerBase}/sync`, payload);
+          const { data } = await axiosIndexerV1.get('/sync');
           return !!data.syncStatus
         },
       },
@@ -140,13 +146,11 @@ function getIndexerApi() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          const payload = {
-            headers: { 'x-api-key': env.indexerApiKey },
+          const { data } = await axiosIndexerV1.get('/balances', {
             params: {
               addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50',
             },
-          };
-          const { data } = await axios.get(`${env.indexerBase}/balances`, payload);
+          });
           return !!data.balances
         },
       },
@@ -156,8 +160,7 @@ function getIndexerApi() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          const payload = {
-            headers: { 'x-api-key': env.indexerApiKey },
+          const { data } = await axiosIndexerV1.get('/logs', {
             params: {
               addresses: '0xbb2b8038a1640196fbe3e38816f3e67cba72d940,0xdfc14d2af169b0d36c4eff567ada9b2e0cae044f',
               chainId: 1,
@@ -166,8 +169,7 @@ function getIndexerApi() {
               to_block: 22019085,
               limit: 10
             },
-          };
-          const { data } = await axios.get(`${env.indexerBase}/logs`, payload);
+          });
           return !!data.logs
         },
       },
@@ -186,8 +188,7 @@ function getIndexerApiV2() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          const payload = { headers: { 'x-api-key': env.indexerApiKeyV2 } };
-          const { data } = await axios.get(`${env.indexerBaseV2}/sync`, payload);
+          const { data } = await axiosIndexerV2.get('/sync');
           return !!data.syncStatus
         },
       },
@@ -197,13 +198,11 @@ function getIndexerApiV2() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          const payload = {
-            headers: { 'x-api-key': env.indexerApiKeyV2 },
+          const { data } = await axiosIndexerV2.get('/balances', {
             params: {
               addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50',
             },
-          };
-          const { data } = await axios.get(`${env.indexerBaseV2}/balances`, payload);
+          });
           return !!data.balances
         },
       },
@@ -213,8 +212,7 @@ function getIndexerApiV2() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          const payload = {
-            headers: { 'x-api-key': env.indexerApiKeyV2 },
+          const { data } = await axiosIndexerV2.get('/logs', {
             params: {
               addresses: '0xbb2b8038a1640196fbe3e38816f3e67cba72d940,0xdfc14d2af169b0d36c4eff567ada9b2e0cae044f',
               chainId: 1,
@@ -223,8 +221,7 @@ function getIndexerApiV2() {
               to_block: 22019085,
               limit: 10
             },
-          };
-          const { data } = await axios.get(`${env.indexerBaseV2}/logs`, payload);
+          });
           return !!data.logs
         },
       },
@@ -234,8 +231,7 @@ function getIndexerApiV2() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          const payload = {
-            headers: { 'x-api-key': env.indexerApiKeyV2 },
+          const { data } = await axiosIndexerV2.get('/token-transfers', {
             params: {
               addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50',
               chainId: 42161,
@@ -244,8 +240,7 @@ function getIndexerApiV2() {
               from_address: true,
               to_address: true
             },
-          };
-          const { data } = await axios.get(`${env.indexerBaseV2}/token-transfers`, payload);
+          });
           return !!data.transfers
         },
       },
@@ -255,8 +250,7 @@ function getIndexerApiV2() {
         link: false,
         url: dummyURL,
         customCheck: async () => {
-          const payload = {
-            headers: { 'x-api-key': env.indexerApiKeyV2 },
+          const { data } = await axiosIndexerV2.get('/transactions', {
             params: {
               addresses: '0x28c6c06298d514db089934071355e5743bf21d60',
               chainId: 1,
@@ -266,8 +260,7 @@ function getIndexerApiV2() {
               to_address: true,
               limit: 100
             },
-          };
-          const { data } = await axios.get(`${env.indexerBaseV2}/transactions`, payload);
+          });
           return !!data.transactions
         },
       },
