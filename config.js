@@ -71,6 +71,7 @@ export default {
     getTvlApi(),
     getCoinsApi(),
     getYieldApi(),
+    getRpcAggWorkerEndpoints(),
   ],
 };
 
@@ -369,5 +370,33 @@ function getPublicSites() {
         url: `https://chainlist.org/rpcs.json`,
       },
     ],
+  }
+}
+
+function getRpcAggWorkerEndpoints() {
+  // supported chains on defillama swap
+  const chains = ['ethereum', 'arbitrum', 'optimism', 'base', 'polygon', 'bsc', 'avax', 'fantom', 'sonic', 'era', 'polygon_zkevm', 'linea', 'xdai', 'klaytn', 'aurora', 'celo', 'scroll']
+  return {
+    id: 'rpc-agg-worker',
+    name: 'RPC Aggregator Worker',
+    endpoints: chains.map(chain => {
+      return {
+        id: chain,
+        name: chain,
+        url: `${env.rpcAggWorker}/${chain}`,
+        request: {
+          method: 'POST',
+          body: JSON.stringify({
+            id: 1,
+            jsonrpc: '2.0',
+            method: 'eth_blockNumber',
+            params: [],
+          }),
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        },
+      }
+    })
   }
 }
