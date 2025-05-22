@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 				let $site = document.createElement('div');
 				$site.classList.add('site');
-				let $siteName = document.createElement('h1');
+				let $siteName = document.createElement('h4');
 				$siteName.innerText = site.name;
 				$site.append($siteName);
 
@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 					let $endpoint = document.createElement('div');
 					$endpoint.classList.add('endpoint');
 
-					$endpointName = document.createElement('h3');
+					$endpointName = document.createElement('div');
 					$endpointName.innerText = endpoint.name;
 					if(endpoint.link) {
 						let $link = document.createElement('a');
@@ -81,10 +81,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 						combinedLogs.push({t, err, ttfb, dur, dns, tcp});
 					}
 					$statusBar.setLogs(combinedLogs);
-					$site.querySelector('h1').after($statusBar);
+					$site.querySelector('h4').after($statusBar);
 				// }
 			}
 		} catch (error) {
+			console.error("Error loading server status:", error);
 			setError("Error loading server status:", error);
 		}
 	};
