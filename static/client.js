@@ -25,6 +25,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 				$siteName.innerText = site.name;
 				$site.append($siteName);
 
+				let $accordion = document.createElement('div');
+				$accordion.classList.add('accordion');
+
+				let $accordionButton = document.createElement('button');
+				$accordionButton.classList.add('accordion-button');
+				$accordionButton.innerText = 'Expand';
+				$accordionButton.addEventListener('click', () => {
+					$accordionContent.classList.toggle('open');
+				});
+				let $accordionContent = document.createElement('div');
+				$accordionContent.classList.add('accordion-content');
+				$accordion.append($accordionButton, $accordionContent);
+				$site.append($accordion);
+
 				$main.append($site);
 
 				let nEndpoints = 0;
@@ -51,10 +65,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 					let $statusBarEndpoint = document.createElement('status-bar');
 					endpointPoints.push($statusBarEndpoint.setLogs(endpoint.logs));
 					$endpoint.append($statusBarEndpoint);
-
-					$site.append($endpoint);
+					$accordionContent.append($endpoint);
 				}
-				if(nEndpoints>1) {
+				// if(nEndpoints>1) {
 					let $statusBar = document.createElement('status-bar');
 					let combinedLogs = [];
 					for(let i=0;i<config.nDataPoints;i++) {
@@ -68,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 					}
 					$statusBar.setLogs(combinedLogs);
 					$site.querySelector('h1').after($statusBar);
-				}
+				// }
 			}
 		} catch (error) {
 			setError("Error loading server status:", error);
