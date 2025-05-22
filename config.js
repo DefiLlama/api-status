@@ -1,6 +1,6 @@
 let env = (await import('./env.js')).default;
 import axios from 'axios';
-const dummyURL = `${env.tvl_api2_base}/hash`
+const dummyURL = `https://coins.llama.fi/prices/current/coingecko:ethereum`
 
 const createIndexerClient = (apiKey, baseURL) => axios.create({
   headers: { "x-api-key": apiKey },
@@ -27,8 +27,8 @@ export default {
   consecutiveHighLatencyNotify: 5, // After how many consecutive High latency events should we send a notification
   sites: [ // List of sites to monitor
     {
-      id: 'internal-api', // optional
-      name: 'Internal API',
+      id: 'test-api', // optional
+      name: 'Sample API',
       endpoints: [ // Each site is a bunch of endpoints that can be tested
         /* {
           id: 'tvl-api2-test', // mandatory for sending notifications
@@ -41,28 +41,10 @@ export default {
             return false
           }, // optional, Function | AsyncFunction -> Run your own custom checks return false in case of errors
         }, */
-        {
-          id: 'tvl-api2-hash', // mandatory for sending notifications
-          name: 'Tvl api2 base',
-          link: false,
-          url: `${env.tvl_api2_base}/hash`, // required
-          sendNotificationEveryXMinutes: 60, // optional, send notification every X minutes defaults to 60
-        },
-        {
-          id: 'dimensions-api2-hash',
-          name: 'Dimensions api2 base',
-          link: false,
-          url: `${env.dimensions_api2_base}/hash`,
-        },
-        {
-          id: 'dimensions-internal-api-options',
-          name: 'Options overview',
-          link: false,
-          url: `${env.dimensions_api2_base}/${env.api2Subpath}/overview/options?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true`,
-        },
       ]
     },
 
+    getInternalApi(),
     getPublicSites(),
     getIndexerApi(),
     getIndexerApiV2(),
@@ -72,8 +54,41 @@ export default {
     getCoinsApi(),
     getYieldApi(),
     getRpcAggWorkerEndpoints(),
-  ],
+  ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
 };
+
+
+function getInternalApi() {
+  if (!env.tvl_api2_base || !env.dimensions_api2_base || !env.api2Subpath) {
+    return null
+  }
+
+  return {
+    id: 'internal-api', // optional
+    name: 'Internal API',
+    endpoints: [
+      {
+        id: 'tvl-api2-hash', // mandatory for sending notifications
+        name: 'Tvl api2 base',
+        link: false,
+        url: `${env.tvl_api2_base}/hash`, // required
+        sendNotificationEveryXMinutes: 60, // optional, send notification every X minutes defaults to 60
+      },
+      {
+        id: 'dimensions-api2-hash',
+        name: 'Dimensions api2 base',
+        link: false,
+        url: `${env.dimensions_api2_base}/hash`,
+      },
+      {
+        id: 'dimensions-internal-api-options',
+        name: 'Options overview',
+        link: false,
+        url: `${env.dimensions_api2_base}/${env.api2Subpath}/overview/options?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true`,
+      },
+    ]
+  }
+}
 
 
 function getDimensionsApi() {
@@ -127,6 +142,9 @@ function getDimensionsApi() {
 }
 
 function getIndexerApi() {
+  if (!env.indexerBase || !env.indexerApiKey) {
+    return null
+  }
   return {
     id: 'indexer-api',
     name: 'Indexer API',
@@ -179,6 +197,9 @@ function getIndexerApi() {
 }
 
 function getIndexerApiV2() {
+  if (!env.indexerBaseV2 || !env.indexerApiKeyV2) {
+    return null
+  }
   return {
     id: 'indexer-api',
     name: 'Indexer API V2',
@@ -270,6 +291,9 @@ function getIndexerApiV2() {
 }
 
 function getStablecoinApi() {
+  if (!env.stablecoinBase) {
+    return null
+  }
   return {
     id: 'stablecoin-api',
     name: 'Stablecoin API',
@@ -335,6 +359,9 @@ function getCoinsApi() {
 }
 
 function getYieldApi() {
+  if (!env.yieldInternalBase) {
+    return null
+  }
   return {
     id: 'yield-api',
     name: 'Yield API',
@@ -374,6 +401,9 @@ function getPublicSites() {
 }
 
 function getRpcAggWorkerEndpoints() {
+  if (!env.rpcAggWorker) {
+    return null
+  }
   // supported chains on defillama swap
   const chains = ['ethereum', 'arbitrum', 'optimism', 'base', 'polygon', 'bsc', 'avax', 'fantom', 'sonic', 'era', 'polygon_zkevm', 'linea', 'xdai', 'klaytn', 'aurora', 'celo', 'scroll']
   return {
@@ -395,6 +425,11 @@ function getRpcAggWorkerEndpoints() {
           headers: {
             'Content-Type': 'application/json',
           }
+        },
+        link: false,
+        customCheck: async (content) => {
+          const { result } = JSON.parse(content);
+          return !isNaN(+result)
         },
       }
     })

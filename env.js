@@ -12,5 +12,5 @@ export default {
   defaultWebhookUrl: process.env.DEFAULT_WEBHOOK_URL,
   stablecoinBase: process.env.STABLECOIN_BASE,
   yieldInternalBase: process.env.YIELD_INTERNAL_BASE,
-  rpcAggWorker: process.env.RPC_AGG_WORKER ?? 'https://rpc.llama-rpc.com',
+  rpcAggWorker: process.env.RPC_AGG_WORKER,
 }
