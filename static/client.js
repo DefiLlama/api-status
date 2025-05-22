@@ -33,6 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 				$accordionButton.innerText = 'Expand';
 				$accordionButton.addEventListener('click', () => {
 					$accordionContent.classList.toggle('open');
+					$accordionButton.innerText = $accordionContent.classList.contains('open') ? 'Collapse' : 'Expand';
 				});
 				let $accordionContent = document.createElement('div');
 				$accordionContent.classList.add('accordion-content');
