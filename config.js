@@ -405,7 +405,10 @@ function getRpcAggWorkerEndpoints() {
     return null
   }
   // supported chains on defillama swap
-  const chains = ['ethereum', 'arbitrum', 'optimism', 'base', 'polygon', 'bsc', 'avax', 'fantom', 'sonic', 'era', 'polygon_zkevm', 'linea', 'xdai', 'klaytn', 'celo', 'scroll']
+  let chains = ['ethereum', 'arbitrum', 'optimism', 'base', 'polygon', 'bsc', 'avax', 'fantom', 'sonic', 'era', 'polygon_zkevm', 'linea', 'xdai', 'klaytn', 'celo', 'scroll', 'aurora']
+  const problembaticChainsSet = new Set(['fantom', 'aurora',])
+  chains = chains.filter(chain => !problembaticChainsSet.has(chain))
+
   return {
     id: 'rpc-agg-worker',
     name: 'RPC Aggregator Worker',
