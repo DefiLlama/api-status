@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 export default {
   apiBase: process.env.API_BASE ?? 'https://api.llama.fi',
   coinsBase: process.env.COINS_BASE ?? 'https://coins.llama.fi',
@@ -13,4 +17,5 @@ export default {
   stablecoinBase: process.env.STABLECOIN_BASE,
   yieldInternalBase: process.env.YIELD_INTERNAL_BASE,
   rpcAggWorker: process.env.RPC_AGG_WORKER,
+  proKey: process.env.PRO_API_KEY,
 }

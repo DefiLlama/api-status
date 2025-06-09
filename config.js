@@ -54,6 +54,7 @@ export default {
     getCoinsApi(),
     getYieldApi(),
     getRpcAggWorkerEndpoints(),
+    getProApi(),
   ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
 };
 
@@ -436,5 +437,89 @@ function getRpcAggWorkerEndpoints() {
         },
       }
     })
+  }
+}
+
+function getProApi() {
+  if (!env.proKey) 
+    return null
+
+  return {
+    id: 'pro-api', // optional
+    name: 'Pro API',
+    endpoints: [
+      {
+        id: 'pro-api-options',
+        name: 'Options overview',
+        link: false,
+        url: `https://pro-api.llama.fi/${env.proKey}/api/overview/options?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true`,
+        customCheck: async (content) => {
+          const { totalAllTime } = JSON.parse(content)
+          return totalAllTime > 0
+        },
+      },
+      {
+        id: 'pro-api-stablecoins',
+        name: 'Stablecoins',
+        link: false,
+        url: `https://pro-api.llama.fi/${env.proKey}/stablecoins/stablecoinchains`,
+        customCheck: async (content) => {
+          const response = JSON.parse(content);
+          return response.length > 10
+        },
+      },
+      {
+        id: 'pro-api-etf',
+        name: 'ETFs',
+        link: false,
+        url: `https://pro-api.llama.fi/${env.proKey}/etfs/overview`,
+        customCheck: async (content) => {
+          const response = JSON.parse(content);
+          return response.length > 3
+        },
+      },
+      {
+        id: 'pro-api-protocols',
+        name: 'Protocols overview',
+        link: false,
+        url: `https://pro-api.llama.fi/${env.proKey}/api/protocols`,
+        customCheck: async (content) => {
+          const response = JSON.parse(content);
+          return response.length > 10
+        },
+      },
+      {
+        id: 'pro-api-usage',
+        name: 'usage',
+        link: false,
+        url: `https://pro-api.llama.fi/usage/${env.proKey}`,
+        customCheck: async (content) => {
+          const response = JSON.parse(content);
+          return response.creditsLeft > 10
+        },
+      },
+      {
+        id: 'pro-api-emissions',
+        name: 'emissions',
+        link: false,
+        url: `https://pro-api.llama.fi/${env.proKey}/api/emission/aptos`,
+      },
+      {
+        id: 'pro-api-tvl-categories',
+        name: 'Tvl categories',
+        link: false,
+        url: `https://pro-api.llama.fi/${env.proKey}/api/categories`,
+      },
+      {
+        id: 'pro-api-coins',
+        name: 'Coins',
+        link: false,
+        url: `https://pro-api.llama.fi/${env.proKey}/coins/prices/current/coingecko:ethereum`,
+        customCheck: async (content) => {
+          const response = JSON.parse(content);
+          return response.coins["coingecko:ethereum"].price > 0
+        },
+      },
+    ]
   }
 }
