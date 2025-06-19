@@ -1,11 +1,11 @@
 import { promises as fs, watchFile, existsSync, writeFileSync } from 'fs';
-// import { exec } from 'child_process';
+const { reImport } = await import('./util.js')
 let config = (await import('./config.js')).default;
 const statusFile = './static/status.json';
 
 watchFile('./config.js', async () => { // Dynamically reload config and watch it for changes.
 	try {
-		config = (await import('./config.js?refresh=' + Date.now())).default;
+		config = await reImport('./config.js');
 		console.log('Reloaded config file.')
 	} catch (e) {
 		console.error(e);
@@ -36,21 +36,7 @@ const checkContent = async (content, criterion, negate = false) => {
 		throw new Error('Invalid content check criterion.')
 	}
 };
-const sendTelegramMessage = async (text) => {
-	const url = `https://api.telegram.org/bot${config.telegram.botToken}/sendMessage`;
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			chat_id: config.telegram.chatId,
-			text: text,
-		}),
-	});
-	if (!response.ok) {
-		throw new Error(`[Telegram] Failed to send message: ${response.statusText}`);
-	}
-	return await response.json();
-};
+
 const sendDiscordMessage = async (text, endpoint) => {
 	if (hostLink) text += `\n\n${hostLink}`;
 	const webhook = endpoint.discordWebhookUrl || config.discord.webhookUrl;
@@ -61,61 +47,6 @@ const sendDiscordMessage = async (text, endpoint) => {
 			content: text
 		})
 	});
-};
-const sendSMSMessage = async (text) => {
-	const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.twilio.accountSid}/Messages.json`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/x-www-form-urlencoded',
-			'Authorization': `Basic ${Buffer.from(`${config.twilio.accountSid}:${config.twilio.accountToken}`).toString('base64')}`
-		},
-		body: new URLSearchParams({
-			To: config.twilio.toNumber,
-			From: config.twilio.twilioNumber,
-			Body: text
-		})
-	});
-	if (!response.ok) {
-		throw new Error(`[Twilio-SMS] Failed to send message: ${response.statusText}`);
-	}
-	return await response.json();
-};
-const sendSlackMessage = async (text) => {
-	const url = 'https://slack.com/api/chat.postMessage';
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${config.slack.botToken}`
-		},
-		body: JSON.stringify({
-			channel: config.slack.channelId,
-			text: text,
-		})
-	});
-	if (!response.ok) {
-		throw new Error(`[Slack] Failed to send message: ${response.statusText}`);
-	}
-	return await response.json();
-};
-const sendEmailMessage = async (text) => {
-	const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-		method: 'POST',
-		headers: {
-			'Authorization': `Bearer ${config.sendgrid.apiKey}`,
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			personalizations: [{ to: [{ email: config.sendgrid.toEmail }] }],
-			from: { email: config.sendgrid.toFromEmail },
-			subject: "aPulse — Server Status Notification",
-			content: [{ type: "text/plain", value: text }]
-		})
-	});
-	if (!response.ok) {
-		throw new Error(`[SendGrid-Email] Failed to send message: ${response.statusText}`);
-	}
-	return await response.json();
 };
 
 let lastNotificationSent = {}
@@ -142,16 +73,8 @@ const sendNotification = async (message, endpoint) => {
 	lastNotificationSent[id] = Date.now();
 
 
-	if (config.telegram?.botToken && config.telegram?.chatId)
-		await sendTelegramMessage(message);
-	if (config.slack?.botToken && config.slack?.channelId)
-		await sendSlackMessage(message);
 	if (config.discord?.webhookUrl)
 		await sendDiscordMessage(message, endpoint);
-	if (config.twilio?.accountSid && config.twilio?.accountToken && config.twilio?.toNumber && config.twilio?.twilioNumber)
-		await sendSMSMessage(message);
-	if (config.sendgrid?.apiKey && config.sendgrid?.toEmail && config.sendgrid?.toFromEmail)
-		await sendEmailMessage(message);
 }
 
 while (true) {
@@ -160,7 +83,8 @@ while (true) {
 	let status;
 	try {
 		try {
-			status = JSON.parse((await fs.readFile(statusFile)).toString()); // We re-read the file each time in case it was manually modified.
+			if (!status)  // If status is not defined, we will try to read it from the file.
+				status = JSON.parse((await fs.readFile(statusFile)).toString()); // We re-read the file each time in case it was manually modified.
 		} catch (e) { console.error(`Could not find status.json file [${statusFile}], will create it.`) }
 		status = status || {};
 		status.sites = status.sites || {};
@@ -210,11 +134,19 @@ while (true) {
 					try {
 						performance.clearResourceTimings();
 						start = performance.now();
-						let response = await fetch(endpoint.url, {
-							signal: AbortSignal.timeout(config.timeout),
-							...endpoint.request,
-						});
-						let content = await response.text();
+
+						let response = { ok: true }
+						let content = ''
+
+						if (endpoint.url) {  // sometimes we have tests that dont use a URL/fetch the data but does custom checks
+							response = await fetch(endpoint.url, {
+								signal: AbortSignal.timeout(config.timeout),
+								...endpoint.request,
+							});
+							content = await response.text();
+						} else if (typeof endpoint.customCheck !== 'function')
+							throw new Error('No URL or customCheck function was provided for this test');
+
 						await delay(0); // Ensures that the entry was registered.
 						let perf = performance.getEntriesByType('resource')[0];
 						if (perf) {

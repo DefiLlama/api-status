@@ -1,6 +1,7 @@
-let env = (await import('./env.js')).default;
+
 import axios from 'axios';
-const dummyURL = `https://coins.llama.fi/prices/current/coingecko:ethereum`
+const { reImport } = await import('./util.js')
+let env = await reImport('./env.js')
 
 const createIndexerClient = (apiKey, baseURL) => axios.create({
   headers: { "x-api-key": apiKey },
@@ -34,8 +35,8 @@ export default {
           id: 'tvl-api2-test', // mandatory for sending notifications
           name: 'test',
           // discordWebhookUrl: '...', // optional
+          url: 'https://api.llama.fi/tvl', // optional
           link: false, // optional, for notifications and dashboard only, [defaults to endpoint.url], can be disabled by setting it to false
-          url: dummyURL, // required
           sendNotificationEveryXMinutes: 60, // optional, send notification every X minutes defaults to 60
           customCheck: async (content, response) => {
             return false
@@ -154,7 +155,6 @@ function getIndexerApi() {
         id: 'indexer-api-sync',
         name: 'Indexer API sync',
         link: false,
-        url: dummyURL,
         customCheck: async () => {
           const { data } = await axiosIndexerV1.get('/sync');
           return !!data.syncStatus
@@ -164,7 +164,6 @@ function getIndexerApi() {
         id: 'indexer-api-balances',
         name: 'Indexer API Balances',
         link: false,
-        url: dummyURL,
         customCheck: async () => {
           const { data } = await axiosIndexerV1.get('/balances', {
             params: {
@@ -178,7 +177,6 @@ function getIndexerApi() {
         id: 'indexer-api-logs',
         name: 'Indexer API Logs',
         link: false,
-        url: dummyURL,
         customCheck: async () => {
           const { data } = await axiosIndexerV1.get('/logs', {
             params: {
@@ -209,7 +207,6 @@ function getIndexerApiV2() {
         id: 'indexer-api-v2-sync',
         name: 'Indexer API V2 sync',
         link: false,
-        url: dummyURL,
         customCheck: async () => {
           const { data } = await axiosIndexerV2.get('/sync');
           return !!data.syncStatus
@@ -219,7 +216,6 @@ function getIndexerApiV2() {
         id: 'indexer-api-v2-balances',
         name: 'Indexer API V2 Balances',
         link: false,
-        url: dummyURL,
         customCheck: async () => {
           const { data } = await axiosIndexerV2.get('/balances', {
             params: {
@@ -233,7 +229,6 @@ function getIndexerApiV2() {
         id: 'indexer-api-v2-logs',
         name: 'Indexer API V2 Logs',
         link: false,
-        url: dummyURL,
         customCheck: async () => {
           const { data } = await axiosIndexerV2.get('/logs', {
             params: {
@@ -252,7 +247,6 @@ function getIndexerApiV2() {
         id: 'indexer-api-v2-token-Transfers',
         name: 'Indexer API V2 Token-Transfers',
         link: false,
-        url: dummyURL,
         customCheck: async () => {
           const { data } = await axiosIndexerV2.get('/token-transfers', {
             params: {
@@ -271,7 +265,6 @@ function getIndexerApiV2() {
         id: 'indexer-api-v2-Transactions',
         name: 'Indexer API V2 Transactions',
         link: false,
-        url: dummyURL,
         customCheck: async () => {
           const { data } = await axiosIndexerV2.get('/transactions', {
             params: {
@@ -441,7 +434,7 @@ function getRpcAggWorkerEndpoints() {
 }
 
 function getProApi() {
-  if (!env.proKey) 
+  if (!env.proKey)
     return null
 
   return {
