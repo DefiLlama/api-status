@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-const { reImport } = await import('./util.js')
+const { reImport, hashString } = await import('./util.js')
 let env = await reImport('./env.js')
 
 const createIndexerClient = (apiKey, baseURL) => axios.create({
@@ -11,34 +11,39 @@ const createIndexerClient = (apiKey, baseURL) => axios.create({
 const axiosIndexerV2 = createIndexerClient(env.indexerApiKeyV2, env.indexerBaseV2)
 const axiosIndexerV1 = createIndexerClient(env.indexerApiKey, env.indexerBase)
 
-export default {
+const ONE_MINUTE = 1 // everything is in minutes
+const ONE_HOUR = 60 * ONE_MINUTE
+const ONE_DAY = ONE_HOUR * 24
+
+
+export const config = {
   host: env.host,
   interval: 5, // Interval in minutes between each pulse
   nDataPoints: 90, // Number of datapoints to display on the dashboard
   responseTimeGood: 3000, // In milliseconds, this and below will be green
   responseTimeWarning: 60000, // In milliseconds, above this will be red
-  timeout: 1200000, // In milliseconds, requests will be aborted above this
+  timeout: 120000, // In milliseconds, requests will be aborted above this
   verbose: false, // Whether or not to output pulse messages in the console
   readableStatusJson: false, // Format status.json to be human readable
   logsMaxDatapoints: 200, // Maximum datapoints history to keep (per endpoint)
-  discord: { // optional, tokens to send notifications through discord
-    webhookUrl: env.defaultWebhookUrl,
-  },
-  consecutiveErrorsNotify: 2, // After how many consecutive Errors events should we send a notification
+  discordWebhookUrl: env.defaultWebhookUrl, //  to send notifications through discord
+  consecutiveErrorsNotify: 3, // After how many consecutive Errors events should we send a notification
   consecutiveHighLatencyNotify: 5, // After how many consecutive High latency events should we send a notification
+  staleCheckInterval: ONE_DAY * 1.3,
   sites: [ // List of sites to monitor
     {
       id: 'test-api', // optional
       name: 'Sample API',
       endpoints: [ // Each site is a bunch of endpoints that can be tested
         /* {
-          id: 'tvl-api2-test', // mandatory for sending notifications
+          id: 'tvl-api2-test', //optional
           name: 'test',
+          staleCheckInterval: 2*60, // How frequently (in minutes) to check for repeated stale data
           // discordWebhookUrl: '...', // optional
           url: 'https://api.llama.fi/tvl', // optional
           link: false, // optional, for notifications and dashboard only, [defaults to endpoint.url], can be disabled by setting it to false
           sendNotificationEveryXMinutes: 60, // optional, send notification every X minutes defaults to 60
-          customCheck: async (content, response) => {
+          customCheck: async ({content, response, jsonResponse, endpoint }) => {
             return false
           }, // optional, Function | AsyncFunction -> Run your own custom checks return false in case of errors
         }, */
@@ -59,6 +64,17 @@ export default {
   ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
 };
 
+config.sites.forEach(site => {
+  const { endpoints = [] } = site
+  if (!site.id) site.id = site.name ? site.name.toLowerCase().replace(/\s+/g, '-') : 'site';
+  if (!site.name) site.name = site.id.charAt(0).toUpperCase() + site.id.slice(1);
+  endpoints.forEach(endpoint => {
+    if (!endpoint.id) endpoint.id = endpoint.name ? endpoint.name.toLowerCase().replace(/\s+/g, '-') : 'endpoint';
+    if (!endpoint.name) endpoint.name = endpoint.id.charAt(0).toUpperCase() + endpoint.id.slice(1);
+  })
+})
+
+export default config
 
 function getInternalApi() {
   if (!env.tvl_api2_base || !env.dimensions_api2_base || !env.api2Subpath) {
@@ -73,6 +89,7 @@ function getInternalApi() {
         id: 'tvl-api2-hash', // mandatory for sending notifications
         name: 'Tvl api2 base',
         link: false,
+        staleCheckInterval: 3 * ONE_DAY,  // changes once when there is a new commit
         url: `${env.tvl_api2_base}/hash`, // required
         sendNotificationEveryXMinutes: 60, // optional, send notification every X minutes defaults to 60
       },
@@ -80,6 +97,7 @@ function getInternalApi() {
         id: 'dimensions-api2-hash',
         name: 'Dimensions api2 base',
         link: false,
+        staleCheckInterval: 3 * ONE_DAY,
         url: `${env.dimensions_api2_base}/hash`,
       },
       {
@@ -91,7 +109,6 @@ function getInternalApi() {
     ]
   }
 }
-
 
 function getDimensionsApi() {
   const defaultOptions = `excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true`
@@ -155,8 +172,9 @@ function getIndexerApi() {
         id: 'indexer-api-sync',
         name: 'Indexer API sync',
         link: false,
-        customCheck: async () => {
+        customCheck: async ({ endpointStatus }) => {
           const { data } = await axiosIndexerV1.get('/sync');
+          endpointStatus.contentHash = hashString(data)
           return !!data.syncStatus
         },
       },
@@ -207,8 +225,9 @@ function getIndexerApiV2() {
         id: 'indexer-api-v2-sync',
         name: 'Indexer API V2 sync',
         link: false,
-        customCheck: async () => {
+        customCheck: async ({ endpointStatus }) => {
           const { data } = await axiosIndexerV2.get('/sync');
+          endpointStatus.contentHash = hashString(data)
           return !!data.syncStatus
         },
       },
@@ -291,11 +310,13 @@ function getStablecoinApi() {
   return {
     id: 'stablecoin-api',
     name: 'Stablecoin API',
+    interval: ONE_HOUR,
     endpoints: [
       {
         id: 'stablecoin-api-config',
         name: 'Config',
         link: false,
+        staleCheckInterval: false, // this doesnt change very often
         url: `${env.stablecoinBase}/config`,
       },
       {
@@ -337,13 +358,14 @@ function getCoinsApi() {
   return {
     id: 'coins-api',
     name: 'Coins API',
+    staleCheckInterval: ONE_HOUR,
     endpoints: [
       {
         id: 'coins-api-protocols',
         name: 'Get token price',
         url: `${env.coinsBase}/prices/current/coingecko:ethereum,coingecko:tether,ethereum:0x0000000000000000000000000000000000000000`,
-        customCheck: async (content) => {
-          const { coins } = JSON.parse(content);
+        customCheck: async ({ jsonContent }) => {
+          const { coins } = jsonContent;
           const status = !['coingecko:ethereum', 'coingecko:tether', 'ethereum:0x0000000000000000000000000000000000000000'].some((coin) => !coins[coin]?.price)
           return status
         },
@@ -359,6 +381,7 @@ function getYieldApi() {
   return {
     id: 'yield-api',
     name: 'Yield API',
+    interval: ONE_HOUR,
     endpoints: [
       {
         id: 'yield-api-protocols',
@@ -369,6 +392,7 @@ function getYieldApi() {
         id: 'yield-api-protocol-chart',
         name: 'Pool chart',
         link: false,
+        staleCheckInterval: false, // this doesnt change very often
         url: `${env.yieldInternalBase}/chart/747c1d2a-c668-4682-b9f9-296708a3dd90`,
       },
     ],
@@ -379,6 +403,7 @@ function getPublicSites() {
   return {
     id: 'public',
     name: 'Public sites',
+    staleCheckInterval: false, // this doesnt change very often
     endpoints: [
       {
         id: 'chainlist-site',
@@ -406,6 +431,7 @@ function getRpcAggWorkerEndpoints() {
   return {
     id: 'rpc-agg-worker',
     name: 'RPC Aggregator Worker',
+    staleCheckInterval: ONE_HOUR,
     endpoints: chains.map(chain => {
       return {
         id: chain,
@@ -424,9 +450,8 @@ function getRpcAggWorkerEndpoints() {
           }
         },
         link: false,
-        customCheck: async (content) => {
-          const { result } = JSON.parse(content);
-          return !isNaN(+result)
+        customCheck: async ({ jsonContent }) => {
+          return !isNaN(+jsonContent.result)
         },
       }
     })
@@ -446,9 +471,8 @@ function getProApi() {
         name: 'Options overview',
         link: false,
         url: `https://pro-api.llama.fi/${env.proKey}/api/overview/options?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true`,
-        customCheck: async (content) => {
-          const { totalAllTime } = JSON.parse(content)
-          return totalAllTime > 0
+        customCheck: async ({ jsonContent }) => {
+          return jsonContent.totalAllTime > 0
         },
       },
       {
@@ -456,19 +480,18 @@ function getProApi() {
         name: 'Stablecoins',
         link: false,
         url: `https://pro-api.llama.fi/${env.proKey}/stablecoins/stablecoinchains`,
-        customCheck: async (content) => {
-          const response = JSON.parse(content);
-          return response.length > 10
+        customCheck: async ({ jsonContent }) => {
+          return jsonContent.length > 10
         },
       },
       {
         id: 'pro-api-etf',
         name: 'ETFs',
         link: false,
+        staleCheckInterval: false,
         url: `https://pro-api.llama.fi/${env.proKey}/etfs/overview`,
-        customCheck: async (content) => {
-          const response = JSON.parse(content);
-          return response.length > 3
+        customCheck: async ({ jsonContent }) => {
+          return jsonContent.length > 3
         },
       },
       {
@@ -476,31 +499,32 @@ function getProApi() {
         name: 'Protocols overview',
         link: false,
         url: `https://pro-api.llama.fi/${env.proKey}/api/protocols`,
-        customCheck: async (content) => {
-          const response = JSON.parse(content);
-          return response.length > 10
+        customCheck: async ({ jsonContent }) => {
+          return jsonContent.length > 10
         },
       },
       {
         id: 'pro-api-usage',
         name: 'usage',
         link: false,
+        staleCheckInterval: false,
         url: `https://pro-api.llama.fi/usage/${env.proKey}`,
-        customCheck: async (content) => {
-          const response = JSON.parse(content);
-          return response.creditsLeft > 10
+        customCheck: async ({ jsonContent }) => {
+          return jsonContent.creditsLeft > 10
         },
       },
       {
         id: 'pro-api-emissions',
         name: 'emissions',
         link: false,
+        staleCheckInterval: false,
         url: `https://pro-api.llama.fi/${env.proKey}/api/emission/aptos`,
       },
       {
         id: 'pro-api-tvl-categories',
         name: 'Tvl categories',
         link: false,
+        staleCheckInterval: false,
         url: `https://pro-api.llama.fi/${env.proKey}/api/categories`,
       },
       {
@@ -508,9 +532,8 @@ function getProApi() {
         name: 'Coins',
         link: false,
         url: `https://pro-api.llama.fi/${env.proKey}/coins/prices/current/coingecko:ethereum`,
-        customCheck: async (content) => {
-          const response = JSON.parse(content);
-          return response.coins["coingecko:ethereum"].price > 0
+        customCheck: async ({ jsonContent }) => {
+          return jsonContent.coins["coingecko:ethereum"].price > 0
         },
       },
     ]

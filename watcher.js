@@ -1,5 +1,5 @@
 import { promises as fs, watchFile, existsSync, writeFileSync } from 'fs';
-const { reImport } = await import('./util.js')
+const { reImport, hashString, } = await import('./util.js')
 let config = (await import('./config.js')).default;
 const statusFile = './static/status.json';
 
@@ -37,21 +37,23 @@ const checkContent = async (content, criterion, negate = false) => {
 	}
 };
 
-const sendDiscordMessage = async (text, endpoint) => {
-	if (hostLink) text += `\n\n${hostLink}`;
-	const webhook = endpoint.discordWebhookUrl || config.discord.webhookUrl;
-	await fetch(webhook, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			content: text
-		})
-	});
-};
 
 let lastNotificationSent = {}
 
-const sendNotification = async (message, endpoint) => {
+const sendNotification = async ({ message, endpoint, discordWebhookUrl }) => {
+
+	const sendDiscordMessage = async (text) => {
+		if (hostLink) text += `\n\n${hostLink}`;
+		const webhook = endpoint.discordWebhookUrl || config.discord.webhookUrl;
+		await fetch(webhook, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				content: text
+			})
+		});
+	};
+
 	const { id, sendNotificationEveryXMinutes = 60 } = endpoint
 
 
@@ -73,14 +75,17 @@ const sendNotification = async (message, endpoint) => {
 	lastNotificationSent[id] = Date.now();
 
 
-	if (config.discord?.webhookUrl)
-		await sendDiscordMessage(message, endpoint);
+	console.log(`[Sending notification] for ${id}: ${message}`);
+	// if (discordWebhookUrl)
+	// 	await sendDiscordMessage(message, discordWebhookUrl);
 }
 
+let status;
+let isFirstRun = true;
 while (true) {
-	config.verbose && console.log('🔄 Pulse');
+	let verboseLog = config.verbose ? console.log : () => { }; // Use a custom log function to avoid console.log calls when not verbose
+	verboseLog('🔄 Pulse');
 	let startPulse = Date.now();
-	let status;
 	try {
 		try {
 			if (!status)  // If status is not defined, we will try to read it from the file.
@@ -98,8 +103,11 @@ while (true) {
 		status.ui = [];
 
 		let siteIds = [];
-		for (let site of config.sites) {
-			config.verbose && console.log(`⏳ Site: ${site.name || site.id}`);
+
+		await Promise.all(config.sites.map(addSiteStatus))
+
+		async function addSiteStatus(site) {
+			verboseLog(`⏳ Site: ${site.name || site.id}`);
 			let siteId = site.id || handlize(site.name) || 'site';
 			let i = 1; let siteId_ = siteId;
 			while (siteIds.includes(siteId)) { siteId = siteId_ + '-' + (++i) } // Ensure a unique site id
@@ -114,10 +122,18 @@ while (true) {
 			status.ui.push([siteId, endpointIds]);
 			try {
 				for (let endpoint of site.endpoints) {
+
+					function getConfig(key, defaultValue) {
+						if (endpoint.hasOwnProperty(key)) return endpoint[key]
+						if (site.hasOwnProperty(key)) return site[key];
+						if (config.hasOwnProperty(key)) return config[key];
+						return defaultValue;
+					}
+
 					let endpointStatus = {
 						t: Date.now(),// time
 					};
-					config.verbose && console.log(`\tFetching endpoint: ${endpoint.url}`);
+					verboseLog(`\tFetching endpoint: ${endpoint.url}`);
 					let endpointId = endpoint.id || handlize(endpoint.name) || 'endpoint';
 					let i = 1; let endpointId_ = endpointId;
 					while (endpointIds.includes(endpointId)) { endpointId = endpointId_ + '-' + (++i) } // Ensure a unique endpoint id
@@ -129,6 +145,29 @@ while (true) {
 					if (endpoint.link !== false)
 						endpoint_.link = endpoint.link || endpoint.url;
 					endpoint_.logs = endpoint_.logs || [];
+					const lastLog = endpoint_.logs[endpoint_.logs.length - 1];
+					const endpointConfig = {
+						responseTimeGood: getConfig('responseTimeGood', 3000), // Default good response time is 3s
+						responseTimeWarning: getConfig('responseTimeWarning', 60_000), // Default warning response time is 60s
+						timeout: getConfig('timeout', 120_000), // Default timeout is 120 seconds
+						consecutiveErrorsNotify: getConfig('consecutiveErrorsNotify', 3),
+						consecutiveHighLatencyNotify: getConfig('consecutiveHighLatencyNotify', 5), // Default consecutive high latency notify is 5
+						interval: getConfig('interval', 5), // Default interval is 5 minutes
+						logsMaxDatapoints: getConfig('logsMaxDatapoints', 201),
+						discordWebhookUrl: getConfig('discordWebhookUrl'),
+						staleCheckInterval: getConfig('staleCheckInterval'), // How frequently (in minutes) to check for repeated stale data
+					}
+
+					// if it is not first run, we check if it was run recently and skip if it was
+					if (!isFirstRun && lastLog?.t) {
+						const intervalMS = (endpointConfig.interval + 20 / 60) * 60_000 // add 20 seconds to the interval as buffer
+						const lastPulse = lastLog.t;
+						if (endpointStatus.status - lastPulse < intervalMS) {
+							// verboseLog(`\t⏱️ Skipping, last pulse was ${Math.floor((Date.now() - lastPulse) / 1000)} seconds ago.`);
+							continue; // Skip if the last pulse was less than the interval
+						}
+					}
+
 					let start;
 
 					try {
@@ -138,51 +177,91 @@ while (true) {
 						let response = { ok: true }
 						let content = ''
 
+
 						if (endpoint.url) {  // sometimes we have tests that dont use a URL/fetch the data but does custom checks
 							response = await fetch(endpoint.url, {
-								signal: AbortSignal.timeout(config.timeout),
+								signal: AbortSignal.timeout(endpointConfig.timeout),
 								...endpoint.request,
 							});
 							content = await response.text();
+							await delay(0); // Ensures that the entry was registered.
+
+
+							let perf = performance.getEntriesByType('resource').find(e => e.name.href === endpoint.url); // Find the entry for this request
+
+							if (perf) {
+								endpointStatus.dur = perf.responseEnd - perf.startTime; // total request duration
+								endpointStatus.dns = perf.domainLookupEnd - perf.domainLookupStart; // DNS Lookup
+								endpointStatus.tcp = perf.connectEnd - perf.connectStart; // TCP handshake time
+								endpointStatus.ttfb = perf.responseStart - perf.requestStart; // time to first byte -> Latency
+								endpointStatus.dll = perf.responseEnd - perf.responseStart; // time for content download
+							} else { // backup in case entry was not registered
+								endpointStatus.dur = performance.now() - start;
+								endpointStatus.ttfb = endpointStatus.dur;
+								verboseLog(`\tCould not use PerformanceResourceTiming API to measure request.`);
+							}
+
+							if (content.length) {
+								// endpointStatus.contentLength = content.length;
+								endpointStatus.contentHash = hashString(content);
+							}
+
+							// HTTP Status Check
+							if (!endpoint.validStatus && !response.ok) {
+								endpointStatus.err = `HTTP Status ${response.status}: ${response.statusText}`;
+								continue;
+							} else if (endpoint.validStatus && ((Array.isArray(endpoint.validStatus) && !endpoint.validStatus.includes(response.status)) || (!Array.isArray(endpoint.validStatus) && endpoint.validStatus != response.status))) {
+								endpointStatus.err = `HTTP Status ${response.status}: ${response.statusText}`;
+								continue;
+							}
+
+							// Content checks
+							if (endpoint.mustFind && !await checkContent(content, endpoint.mustFind)) {
+								endpointStatus.err = '"mustFind" check failed';
+								continue;
+							}
+							if (endpoint.mustNotFind && !await checkContent(content, endpoint.mustNotFind, true)) {
+								endpointStatus.err = '"mustNotFind" check failed';
+								continue;
+							}
+
 						} else if (typeof endpoint.customCheck !== 'function')
 							throw new Error('No URL or customCheck function was provided for this test');
 
-						await delay(0); // Ensures that the entry was registered.
-						let perf = performance.getEntriesByType('resource')[0];
-						if (perf) {
-							endpointStatus.dur = perf.responseEnd - perf.startTime; // total request duration
-							endpointStatus.dns = perf.domainLookupEnd - perf.domainLookupStart; // DNS Lookup
-							endpointStatus.tcp = perf.connectEnd - perf.connectStart; // TCP handshake time
-							endpointStatus.ttfb = perf.responseStart - perf.requestStart; // time to first byte -> Latency
-							endpointStatus.dll = perf.responseEnd - perf.responseStart; // time for content download
-						} else { // backup in case entry was not registered
-							endpointStatus.dur = performance.now() - start;
-							endpointStatus.ttfb = endpointStatus.dur;
-							config.verbose && console.log(`\tCould not use PerformanceResourceTiming API to measure request.`);
+						if (endpoint.customCheck && typeof endpoint.customCheck == 'function') {
+							let jsonContent
+							try {
+								if (content.length)
+									jsonContent = JSON.parse(content);
+							} catch (e) { }
+							const checkResult = await endpoint.customCheck({ content, response, jsonContent, endpoint, site, endpointStatus, logs: endpoint_.logs });
+
+							if (!endpoint.url) {
+								endpointStatus.dur = performance.now() - start;
+								endpointStatus.ttfb = endpointStatus.dur;
+							}
+
+							if (!checkResult) {
+								endpointStatus.err = '"customCheck" check failed';
+								continue;
+							}
 						}
 
-						// HTTP Status Check
-						if (!endpoint.validStatus && !response.ok) {
-							endpointStatus.err = `HTTP Status ${response.status}: ${response.statusText}`;
-							continue;
-						} else if (endpoint.validStatus && ((Array.isArray(endpoint.validStatus) && !endpoint.validStatus.includes(response.status)) || (!Array.isArray(endpoint.validStatus) && endpoint.validStatus != response.status))) {
-							endpointStatus.err = `HTTP Status ${response.status}: ${response.statusText}`;
-							continue;
+
+						// Stale response check, check if enabled, check if there are logs with the same contentHash (if that is missing, it means the content has changed)
+						if (endpointConfig.staleCheckInterval && endpointStatus.contentHash && !endpointStatus.err) {
+							const logsWithSameHash = endpoint_.logs.filter(log => log.contentHash === endpointStatus.contentHash);
+
+							if (logsWithSameHash.length) {
+								const firstLogWithSameHash = logsWithSameHash[0]
+								if (firstLogWithSameHash.t && (Date.now() - firstLogWithSameHash.t) > endpointConfig.staleCheckInterval * 60_000) {
+									endpointStatus.err = `Stale response, contentHash is ${endpointStatus.contentHash} same response for the past ${Number((Date.now() - firstLogWithSameHash.t) / (60_000 * 60)).toFixed(2)} hours`;
+									console.log(`[ERROR]`, endpointStatus.err)
+								}
+							}
 						}
 
-						// Content checks
-						if (endpoint.mustFind && !await checkContent(content, endpoint.mustFind)) {
-							endpointStatus.err = '"mustFind" check failed';
-							continue;
-						}
-						if (endpoint.mustNotFind && !await checkContent(content, endpoint.mustNotFind, true)) {
-							endpointStatus.err = '"mustNotFind" check failed';
-							continue;
-						}
-						if (endpoint.customCheck && typeof endpoint.customCheck == 'function' && !await Promise.resolve(endpoint.customCheck(content, response))) {
-							endpointStatus.err = '"customCheck" check failed';
-							continue;
-						}
+
 					} catch (e) {
 						endpointStatus.err = String(e);
 						if (!endpointStatus.dur) {
@@ -191,42 +270,40 @@ while (true) {
 						}
 					} finally {
 						endpoint_.logs.push(endpointStatus);
-						if (endpoint_.logs.length > config.logsMaxDatapoints) // Remove old datapoints
-							endpoint_.logs.splice(0, endpoint_.logs.length - config.logsMaxDatapoints);
+						if (endpoint_.logs.length > endpointConfig.logsMaxDatapoints) // Remove old datapoints
+							endpoint_.logs.splice(0, endpoint_.logs.length - endpointConfig.logsMaxDatapoints);
 						if (endpointStatus.err) {
 							endpoint.consecutiveErrors = (endpoint.consecutiveErrors || 0) + 1;
 							endpoint.consecutiveHighLatency = 0;
-							config.verbose && console.log(`\t🔥 ${site.name || siteId} — ${endpoint.name || endpointId} [${endpointStatus.ttfb.toFixed(2)}ms]`);
-							config.verbose && console.log(`\t→ ${endpointStatus.err}`);
+							verboseLog(`\t🔥 ${site.name || siteId} — ${endpoint.name || endpointId} [${endpointStatus.ttfb.toFixed(2)}ms]`);
+							verboseLog(`\t→ ${endpointStatus.err}`);
 							try {
-								if (endpoint.consecutiveErrors >= config.consecutiveErrorsNotify) {
-									/*await*/ sendNotification( // Don't await to prevent blocking/delaying next pulse
-									`🔥 ERROR\n` +
-									`${site.name || siteId} — ${endpoint.name || endpointId} [${endpointStatus.ttfb.toFixed(2)}ms]\n` +
-									`→ ${endpointStatus.err}` +
-									(endpoint.link !== false ? `\n→ ${endpoint.link || endpoint.url}` : ''), endpoint
-								);
+								if (endpoint.consecutiveErrors >= endpointConfig.consecutiveErrorsNotify) {
+									const message = `🔥 ERROR\n` +
+										`${site.name || siteId} — ${endpoint.name || endpointId} [${endpointStatus.ttfb.toFixed(2)}ms]\n` +
+										`→ ${endpointStatus.err}` +
+										(endpoint.link !== false ? `\n→ ${endpoint.link || endpoint.url}` : '');
+									sendNotification({ message, endpoint, discordWebhookUrl: endpointConfig.discordWebhookUrl });
 								}
 							} catch (e) { console.error(e); }
 						} else {
 							endpoint.consecutiveErrors = 0;
 							let emoji = '🟢';
-							if (endpointStatus.ttfb > config.responseTimeWarning) {
+							if (endpointStatus.ttfb > endpointConfig.responseTimeWarning) {
 								emoji = '🟥';
 								endpoint.consecutiveHighLatency = (endpoint.consecutiveHighLatency || 0) + 1;
 							} else {
 								endpoint.consecutiveHighLatency = 0;
-								if (endpointStatus.ttfb > config.responseTimeGood)
+								if (endpointStatus.ttfb > endpointConfig.responseTimeGood)
 									emoji = '🔶';
 							}
-							config.verbose && console.log(`\t${emoji} ${site.name || siteId} — ${endpoint.name || endpointId} [${endpointStatus.ttfb.toFixed(2)}ms]`);
+							verboseLog(`\t${emoji} ${site.name || siteId} — ${endpoint.name || endpointId} [${endpointStatus?.ttfb?.toFixed(2)}ms]`);
 							try {
-								if (endpoint.consecutiveHighLatency >= config.consecutiveHighLatencyNotify) {
-									/*await*/ sendNotification( // Don't await to prevent blocking/delaying next pulse
-									`🟥 High Latency\n` +
-									`${site.name || siteId} — ${endpoint.name || endpointId} [${endpointStatus.ttfb.toFixed(2)}ms]\n` +
-									(endpoint.link !== false ? `\n→ ${endpoint.link || endpoint.url}` : '', endpoint)
-								);
+								if (endpoint.consecutiveHighLatency >= endpointConfig.consecutiveHighLatencyNotify) {
+									const message = `🟥 High Latency\n` +
+										`${site.name || siteId} — ${endpoint.name || endpointId} [${endpointStatus.ttfb.toFixed(2)}ms]\n` +
+										(endpoint.link !== false ? `\n→ ${endpoint.link || endpoint.url}` : '');
+									sendNotification({ message, endpoint, discordWebhookUrl: endpointConfig.discordWebhookUrl });
 								}
 							} catch (e) { console.error(e); }
 						}
@@ -235,13 +312,14 @@ while (true) {
 			} catch (e) {
 				console.error(e);
 			}
-			config.verbose && console.log(' ');//New line
+			verboseLog(' ');//New line
 		}
 		status.lastPulse = Date.now();
 		await fs.writeFile(statusFile, JSON.stringify(status, undefined, config.readableStatusJson ? 2 : undefined));
 	} catch (e) {
 		console.error(e);
 	}
-	config.verbose && console.log('✅ Done');
+	verboseLog('✅ Done');
 	await delay(config.interval * 60_000 - (Date.now() - startPulse));
+	isFirstRun = false;
 }
