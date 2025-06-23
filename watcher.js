@@ -1,4 +1,5 @@
 import { promises as fs, watchFile, existsSync, writeFileSync } from 'fs';
+import { PromisePool } from "@supercharge/promise-pool";
 const { reImport, hashString, } = await import('./util.js')
 let config = (await import('./config.js')).default;
 const statusFile = './static/status.json';
@@ -105,6 +106,7 @@ while (true) {
 
 		async function addSiteStatus(site) {
 			verboseLog(`⏳ Site: ${site.name || site.id}`);
+			const siteStartTime = Date.now();
 			let siteId = site.id || handlize(site.name) || 'site';
 			let i = 1; let siteId_ = siteId;
 			while (siteIds.includes(siteId)) { siteId = siteId_ + '-' + (++i) } // Ensure a unique site id
@@ -117,8 +119,16 @@ while (true) {
 
 			let endpointIds = [];
 			status.ui.push([siteId, endpointIds]);
-			try {
-				for (let endpoint of site.endpoints) {
+			const endpoints = [...site.endpoints || []]; // Ensure endpoints is an array
+			// randomize endpoints order
+			endpoints.sort(() => Math.random() - 0.5);
+			await PromisePool.withConcurrency(config.concurrency || 3) // Limit concurrency to avoid overwhelming the server
+				.for(endpoints)
+				.process(endpointHandler)
+
+
+			async function endpointHandler(endpoint) {
+				try {
 
 					function getConfig(key, defaultValue) {
 						if (endpoint.hasOwnProperty(key)) return endpoint[key]
@@ -161,7 +171,7 @@ while (true) {
 						const lastPulse = lastLog.t;
 						if (endpointStatus.status - lastPulse < intervalMS) {
 							// verboseLog(`\t⏱️ Skipping, last pulse was ${Math.floor((Date.now() - lastPulse) / 1000)} seconds ago.`);
-							continue; // Skip if the last pulse was less than the interval
+							return; // Skip if the last pulse was less than the interval
 						}
 					}
 
@@ -206,26 +216,22 @@ while (true) {
 							// HTTP Status Check
 							if (!endpoint.validStatus && !response.ok) {
 								endpointStatus.err = `HTTP Status ${response.status}: ${response.statusText}`;
-								continue;
 							} else if (endpoint.validStatus && ((Array.isArray(endpoint.validStatus) && !endpoint.validStatus.includes(response.status)) || (!Array.isArray(endpoint.validStatus) && endpoint.validStatus != response.status))) {
 								endpointStatus.err = `HTTP Status ${response.status}: ${response.statusText}`;
-								continue;
 							}
 
 							// Content checks
-							if (endpoint.mustFind && !await checkContent(content, endpoint.mustFind)) {
+							if (!endpointStatus.err && endpoint.mustFind && !await checkContent(content, endpoint.mustFind)) {
 								endpointStatus.err = '"mustFind" check failed';
-								continue;
 							}
-							if (endpoint.mustNotFind && !await checkContent(content, endpoint.mustNotFind, true)) {
+							if (!endpointStatus.err && endpoint.mustNotFind && !await checkContent(content, endpoint.mustNotFind, true)) {
 								endpointStatus.err = '"mustNotFind" check failed';
-								continue;
 							}
 
 						} else if (typeof endpoint.customCheck !== 'function')
 							throw new Error('No URL or customCheck function was provided for this test');
 
-						if (endpoint.customCheck && typeof endpoint.customCheck == 'function') {
+						if (!endpointStatus.err && endpoint.customCheck && typeof endpoint.customCheck == 'function') {
 							let jsonContent
 							try {
 								if (content.length)
@@ -240,13 +246,12 @@ while (true) {
 
 							if (!checkResult) {
 								endpointStatus.err = '"customCheck" check failed';
-								continue;
 							}
 						}
 
 
 						// Stale response check, check if enabled, check if there are logs with the same contentHash (if that is missing, it means the content has changed)
-						if (endpointConfig.staleCheckInterval && endpointStatus.contentHash && !endpointStatus.err) {
+						if (!endpointStatus.err && endpointConfig.staleCheckInterval && endpointStatus.contentHash && !endpointStatus.err) {
 							const logsWithSameHash = endpoint_.logs.filter(log => log.contentHash === endpointStatus.contentHash);
 
 							if (logsWithSameHash.length) {
@@ -305,11 +310,12 @@ while (true) {
 							} catch (e) { console.error(e); }
 						}
 					}
+				} catch (e) {
+					console.error(e);
 				}
-			} catch (e) {
-				console.error(e);
 			}
 			verboseLog(' ');//New line
+			console.log(`\t⏱️ Site ${site.name || siteId} took ${Number((Date.now() - siteStartTime) / 1000).toFixed(2)} seconds to process.`);
 		}
 		status.lastPulse = Date.now();
 		await fs.writeFile(statusFile, JSON.stringify(status, undefined, config.readableStatusJson ? 2 : undefined));
