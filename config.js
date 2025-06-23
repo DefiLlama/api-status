@@ -552,7 +552,7 @@ function getRpcAggWorkerEndpoints() {
         body: JSON.stringify({
           id: 1,
           jsonrpc: '2.0',
-          method: 'starknet_specVersion',
+          method: 'starknet_blockNumber',
           params: [],
         }),
         headers: {
@@ -561,7 +561,7 @@ function getRpcAggWorkerEndpoints() {
       },
       link: false,
       customCheck: async ({ jsonContent }) => {
-        return jsonContent.result !== undefined
+        return !isNaN(+jsonContent.result)
       },
     }
   })
