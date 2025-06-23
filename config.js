@@ -486,38 +486,139 @@ function getRpcAggWorkerEndpoints() {
   if (!env.rpcAggWorker) {
     return null
   }
+
   // supported chains on defillama swap
-  let chains = ['ethereum', 'arbitrum', 'optimism', 'base', 'polygon', 'bsc', 'avax', 'fantom', 'sonic', 'era', 'polygon_zkevm', 'linea', 'xdai', 'klaytn', 'celo', 'scroll', 'aurora']
+  let evmChains = ['ethereum', 'arbitrum', 'optimism', 'base', 'polygon', 'bsc', 'avax', 'fantom', 'sonic', 'era', 'polygon_zkevm', 'linea', 'xdai', 'klaytn', 'celo', 'scroll', 'aurora']
   const problembaticChainsSet = new Set(['fantom', 'aurora',])
-  chains = chains.filter(chain => !problembaticChainsSet.has(chain))
+  evmChains = evmChains.filter(chain => !problembaticChainsSet.has(chain))
+
+  const evmChainConfigs = evmChains.map(chain => {
+    return {
+      id: chain,
+      name: chain,
+      url: `${env.rpcAggWorker}/${chain}`,
+      request: {
+        method: 'POST',
+        body: JSON.stringify({
+          id: 1,
+          jsonrpc: '2.0',
+          method: 'eth_blockNumber',
+          params: [],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      },
+      link: false,
+      customCheck: async ({ jsonContent }) => {
+        return !isNaN(+jsonContent.result)
+      },
+    }
+  })
+
+  // solana
+  const solanaChainConfigs = ['solana'].map(chain => {
+    return {
+      id: chain,
+      name: chain,
+      url: `${env.rpcAggWorker}/${chain}`,
+      request: {
+        method: 'POST',
+        body: JSON.stringify({
+          id: 1,
+          jsonrpc: '2.0',
+          method: 'getEpochInfo',
+          params: [],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      },
+      link: false,
+      customCheck: async ({ jsonContent }) => {
+        return !isNaN(+jsonContent.result.blockHeight)
+      },
+    }
+  })
+
+  // starknet
+  const starknetChainConfigs = ['starknet'].map(chain => {
+    return {
+      id: chain,
+      name: chain,
+      url: `${env.rpcAggWorker}/${chain}`,
+      request: {
+        method: 'POST',
+        body: JSON.stringify({
+          id: 1,
+          jsonrpc: '2.0',
+          method: 'starknet_specVersion',
+          params: [],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      },
+      link: false,
+      customCheck: async ({ jsonContent }) => {
+        return jsonContent.result !== undefined
+      },
+    }
+  })
+
+  // sui
+  const suiChainConfigs = ['sui'].map(chain => {
+    return {
+      id: chain,
+      name: chain,
+      url: `${env.rpcAggWorker}/${chain}`,
+      request: {
+        method: 'POST',
+        body: JSON.stringify({
+          id: 1,
+          jsonrpc: '2.0',
+          method: 'suix_getLatestSuiSystemState',
+          params: [],
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      },
+      link: false,
+      customCheck: async ({ jsonContent }) => {
+        return !isNaN(+jsonContent.result.epoch)
+      },
+    }
+  })
+
+  // aptos
+  const aptosChainConfigs = ['aptos', 'move'].map(chain => {
+    return {
+      id: chain,
+      name: chain,
+      url: `${env.rpcAggWorker}/${chain}/v1`,
+      request: {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      },
+      link: false,
+      customCheck: async ({ jsonContent }) => {
+        return !isNaN(+jsonContent.epoch)
+      },
+    }
+  })
 
   return {
     id: 'rpc-agg-worker',
     name: 'RPC Aggregator Worker',
     staleCheckInterval: ONE_HOUR,
-    endpoints: chains.map(chain => {
-      return {
-        id: chain,
-        name: chain,
-        url: `${env.rpcAggWorker}/${chain}`,
-        request: {
-          method: 'POST',
-          body: JSON.stringify({
-            id: 1,
-            jsonrpc: '2.0',
-            method: 'eth_blockNumber',
-            params: [],
-          }),
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        },
-        link: false,
-        customCheck: async ({ jsonContent }) => {
-          return !isNaN(+jsonContent.result)
-        },
-      }
-    })
+    endpoints: evmChainConfigs
+      .concat(solanaChainConfigs)
+      .concat(starknetChainConfigs)
+      .concat(suiChainConfigs)
+      .concat(aptosChainConfigs),
   }
 }
 
