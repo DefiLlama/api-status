@@ -85,7 +85,7 @@ function getInternalApi() {
     { name: 'protocol', subPath: '/protocol/aave-v2' },
     { name: 'simpleChainDataset', subPath: '/simpleChainDataset/ethereum' },
     { name: 'simpleChainDataset1', subPath: '/simpleChainDataset/arbitrum' },
-    { name: 'treasury', subPath: '/treasury/aave-v2' },
+    { name: 'treasury', subPath: '/treasury/aave' },
     { name: 'updatedProtocol', subPath: '/updatedProtocol/aave' },
 
 
