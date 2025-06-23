@@ -44,8 +44,7 @@ const sendNotification = async ({ message, endpoint, discordWebhookUrl }) => {
 
 	const sendDiscordMessage = async (text) => {
 		if (hostLink) text += `\n\n${hostLink}`;
-		const webhook = endpoint.discordWebhookUrl || config.discord.webhookUrl;
-		await fetch(webhook, {
+		await fetch(discordWebhookUrl, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -74,10 +73,8 @@ const sendNotification = async ({ message, endpoint, discordWebhookUrl }) => {
 
 	lastNotificationSent[id] = Date.now();
 
-
-	console.log(`[Sending notification] for ${id}: ${message}`);
-	// if (discordWebhookUrl)
-	// 	await sendDiscordMessage(message, discordWebhookUrl);
+	if (discordWebhookUrl)
+		await sendDiscordMessage(message, discordWebhookUrl);
 }
 
 let status;

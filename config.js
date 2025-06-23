@@ -81,6 +81,68 @@ function getInternalApi() {
     return null
   }
 
+  const api2Routes = [
+    { name: 'protocol', subPath: '/protocol/aave-v2' },
+    { name: 'simpleChainDataset', subPath: '/simpleChainDataset/ethereum' },
+    { name: 'simpleChainDataset1', subPath: '/simpleChainDataset/arbitrum' },
+    { name: 'treasury', subPath: '/treasury/aave-v2' },
+    { name: 'updatedProtocol', subPath: '/updatedProtocol/aave' },
+
+
+    { name: 'protocols', subPath: "/protocols", },
+    { name: 'config', subPath: "/config", },
+    { name: 'charts', subPath: "/lite/charts/arbitrum", },
+    { name: 'charts1', subPath: "/lite/charts/solana", },
+
+    { name: 'treasuries', subPath: "/treasuries", },
+    { name: 'entities', subPath: "/entities", },
+    { name: 'chains', subPath: '/chains', },
+    { name: 'chains-v2', subPath: '/v2/chains', },
+    { name: 'tvl', subPath: "/tvl/sky", },
+    { name: 'config smol', subPath: "/config/smol/jito", },
+    { name: 'raises', subPath: "/raises", },
+    { name: 'hacks', subPath: "/hacks", },
+    { name: 'oracles', subPath: "/oracles", },
+    { name: 'forks', subPath: "/forks", },
+    { name: 'categories', subPath: "/categories", },
+    { name: 'langs', subPath: "/langs", },
+    { name: 'chart categories', subPath: "/lite/charts/categories/lending", },
+
+
+    { name: 'dataset', subPath: "/dataset/sky-lending", },
+
+
+    { name: 'lite-protocols', subPath: "/lite/protocols2", },
+    { name: 'lite-v2', subPath: "/lite/v2/protocols", },
+    { name: 'chains2', subPath: "/chains2", },
+    { name: 'chains-category', subPath: "/chains2/lending", },
+    { name: 'yield-config', subPath: "/config/yields", },
+    { name: 'outdated', subPath: "/outdated", },
+
+    { name: 'emissions', subPath: "/emissions", },
+    { name: 'emission-list', subPath: "/emissionsList", },
+    { name: 'emissionsBreakdown', subPath: "/emissionsBreakdown", },
+    { name: 'emissionsBreakdownAggregated', subPath: "/emissionsBreakdownAggregated", },
+    { name: 'chainAssets', subPath: "/chainAssets", },
+
+    { name: 'twitter-overview', subPath: "/twitter/overview", },
+
+    { name: 'charts', subPath: "/charts", },
+    { name: 'v2/historicalChainTvl', subPath: "/v2/historicalChainTvl", },
+
+    { name: 'Dex volume overview', subPath: "/overview/dexs", },
+    { name: 'Fee overview - arbitrum', subPath: "/overview/fees/arbitrum", },
+    { name: 'dimensions-metadata', subPath: "/overview/_internal/dimensions-metadata", },
+    { name: 'chain-id-map', subPath: "/overview/_internal/chain-name-id-map", },
+  ]
+
+  const endpoints = api2Routes.map(route => ({
+    ...route,
+    id: `api2-${route.name}`, // mandatory for sending notifications
+    link: false, 
+    url: `${env.tvl_api2_base}/${env.api2Subpath}${route.subPath}`,
+  }))
+
   return {
     id: 'internal-api', // optional
     name: 'Internal API',
@@ -106,6 +168,7 @@ function getInternalApi() {
         link: false,
         url: `${env.dimensions_api2_base}/${env.api2Subpath}/overview/options?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true`,
       },
+      ...endpoints,
     ]
   }
 }
