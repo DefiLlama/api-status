@@ -418,6 +418,13 @@ function getTvlApi() {
 }
 
 function getCoinsApi() {
+  const COIN_QUERIES = [
+    'coingecko:ethereum', 
+    'coingecko:tether', 
+    'ethereum:0x0000000000000000000000000000000000000000',  // Gas token mapping
+    'ethereum:0xf5e27cce3c82326616784638ef7201fdc242bf89' // Euler V2 Defi Coin
+  ]
+
   return {
     id: 'coins-api',
     name: 'Coins API',
@@ -426,10 +433,22 @@ function getCoinsApi() {
       {
         id: 'coins-api-protocols',
         name: 'Get token price',
-        url: `${env.coinsBase}/prices/current/coingecko:ethereum,coingecko:tether,ethereum:0x0000000000000000000000000000000000000000`,
+        url: `${env.coinsBase}/prices/current/${COIN_QUERIES.join(',')}`,
         customCheck: async ({ jsonContent }) => {
           const { coins } = jsonContent;
-          const status = !['coingecko:ethereum', 'coingecko:tether', 'ethereum:0x0000000000000000000000000000000000000000'].some((coin) => !coins[coin]?.price)
+          const now = Date.now() / 1000;
+          let status = true;
+
+          COIN_QUERIES.map((pk) => {
+            const coin = coins[pk];
+            if (!coin) status = false;
+
+            const { price, decimals, symbol, timestamp } = coin;
+            if (!price || !symbol || !timestamp) status = false;
+            if (!pk.startsWith('coingecko:') && !decimals) status = false 
+            if (now - coin.timestamp > ONE_HOUR * 60) status = false
+          })
+
           return status
         },
       },
