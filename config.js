@@ -58,6 +58,7 @@ export const config = {
     getStablecoinApi(),
     getTvlApi(),
     getCoinsApi(),
+    getDefiCoinsApi(),
     getYieldApi(),
     getRpcAggWorkerEndpoints(),
     getProApi(),
@@ -417,15 +418,34 @@ function getTvlApi() {
   }
 }
 
+function coinsCheck(queries, interval) {
+  return async ({ jsonContent }) => {
+    const { coins } = jsonContent;
+    const now = Date.now() / 1000;
+    let status = true;
+
+    queries.map((pk) => {
+      const coin = coins[pk];
+      if (!coin) status = false;
+
+      const { price, decimals, symbol, timestamp } = coin;
+      if (!price || !symbol || !timestamp) status = false;
+      if (!pk.startsWith('coingecko:') && !decimals) status = false 
+      if (now - coin.timestamp > interval * 60) status = false
+    })
+
+    return status
+  }
+}
+
 function getCoinsApi() {
-  const COIN_QUERIES = [
+  const QUERIES = [
     'coingecko:ethereum', 
     'coingecko:tether', 
     'ethereum:0x0000000000000000000000000000000000000000',  // Gas token mapping
-    'ethereum:0xf5e27cce3c82326616784638ef7201fdc242bf89' // Euler V2 Defi Coin
   ]
 
-  return {
+  return {   
     id: 'coins-api',
     name: 'Coins API',
     staleCheckInterval: ONE_HOUR,
@@ -433,24 +453,31 @@ function getCoinsApi() {
       {
         id: 'coins-api-protocols',
         name: 'Get token price',
-        url: `${env.coinsBase}/prices/current/${COIN_QUERIES.join(',')}`,
-        customCheck: async ({ jsonContent }) => {
-          const { coins } = jsonContent;
-          const now = Date.now() / 1000;
-          let status = true;
+        url: `${env.coinsBase}/prices/current/${QUERIES.join(',')}`,
+        customCheck: coinsCheck(QUERIES, ONE_HOUR)
+      },
+    ],
+  }
+}
 
-          COIN_QUERIES.map((pk) => {
-            const coin = coins[pk];
-            if (!coin) status = false;
 
-            const { price, decimals, symbol, timestamp } = coin;
-            if (!price || !symbol || !timestamp) status = false;
-            if (!pk.startsWith('coingecko:') && !decimals) status = false 
-            if (now - coin.timestamp > ONE_HOUR * 60) status = false
-          })
+function getDefiCoinsApi() {
+  const QUERIES = [
+    'ethereum:0xf5e27cce3c82326616784638ef7201fdc242bf89', // Euler V2
+    'arbitrum:0x821cac5cb29c2d9c99c63be153316a479d550d72', // Pendle SY 
+    'hyperliquid:0xc8b6e0acf159e058e22c564c0c513ec21f8a1bf5', // hywstHYPE
+  ]
 
-          return status
-        },
+  return {
+    id: 'defi-coins-api',
+    name: 'Defi Coins API',
+    staleCheckInterval: 3 * ONE_HOUR,
+    endpoints: [
+      {
+        id: 'coins-api-defi-protocols',
+        name: 'Get defi token price',
+        url: `${env.coinsBase}/prices/current/${QUERIES.join(',')}`,
+        customCheck: coinsCheck(QUERIES, 3 * ONE_HOUR)
       },
     ],
   }
