@@ -17,5 +17,6 @@ export default {
   stablecoinBase: process.env.STABLECOIN_BASE,
   yieldInternalBase: process.env.YIELD_INTERNAL_BASE,
   rpcAggWorker: process.env.RPC_AGG_WORKER,
+  coinsWebhookUrl: process.env.URGENT_COINS_WEBHOOK,
   proKey: process.env.PRO_API_KEY,
 }

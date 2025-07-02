@@ -58,7 +58,6 @@ export const config = {
     getStablecoinApi(),
     getTvlApi(),
     getCoinsApi(),
-    getDefiCoinsApi(),
     getYieldApi(),
     getRpcAggWorkerEndpoints(),
     getProApi(),
@@ -444,11 +443,12 @@ function getCoinsApi() {
     'coingecko:tether', 
     'ethereum:0x0000000000000000000000000000000000000000',  // Gas token mapping
   ]
+  const defiCoinsEndpoints = getDefiCoinsApi().endpoints
 
   return {   
     id: 'coins-api',
     name: 'Coins API',
-    staleCheckInterval: ONE_HOUR,
+    discordWebhookUrl: env.coinsWebhookUrl, // optional
     endpoints: [
       {
         id: 'coins-api-protocols',
@@ -456,6 +456,7 @@ function getCoinsApi() {
         url: `${env.coinsBase}/prices/current/${QUERIES.join(',')}`,
         customCheck: coinsCheck(QUERIES, ONE_HOUR)
       },
+      ...defiCoinsEndpoints
     ],
   }
 }
