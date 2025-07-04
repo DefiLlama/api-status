@@ -426,11 +426,11 @@ function coinsCheck(queries, interval) {
     queries.map((pk) => {
       const coin = coins[pk];
       if (!coin) status = false;
-
+      
       const { price, decimals, symbol, timestamp } = coin;
       if (!price || !symbol || !timestamp) status = false;
-      if (!pk.startsWith('coingecko:') && !decimals) status = false 
-      if (now - coin.timestamp > interval * 60) status = false
+      else if (!pk.startsWith('coingecko:') && !decimals) status = false 
+      else if (now - coin.timestamp > interval * 60) status = false
     })
 
     return status
