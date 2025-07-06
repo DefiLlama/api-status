@@ -425,15 +425,12 @@ function coinsCheck(queries, interval) {
 
     queries.map((pk) => {
       const coin = coins[pk];
-      if (!coin) { 
-        status = false;
-        return 
-      }
+      if (!coin) throw new Error(`Coin ${pk} is missing`);
       
       const { price, decimals, symbol, timestamp } = coin;
-      if (!price || !symbol || !timestamp) status = false;
-      else if (!pk.startsWith('coingecko:') && !decimals) status = false 
-      else if (now - coin.timestamp > interval * 60 * 1.2) status = false
+      if (!price || !symbol || !timestamp) throw new Error(`Coin ${pk} is missing price, symbol, or timestamp`);
+      else if (!pk.startsWith('coingecko:') && !decimals) throw new Error(`Coin ${pk} is missing decimals`);
+      else if (now - coin.timestamp > interval * 60 * 1.2) throw new Error(`Coin ${pk} is stale`);
     })
 
     return status
