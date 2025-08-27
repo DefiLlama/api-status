@@ -295,19 +295,6 @@ function getIndexerApiV2() {
         },
       },
       {
-        id: 'indexer-api-v2-balances',
-        name: 'Indexer API V2 Balances',
-        link: false,
-        customCheck: async () => {
-          const { data } = await axiosIndexerV2.get('/balances', {
-            params: {
-              addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50',
-            },
-          });
-          return !!data.balances
-        },
-      },
-      {
         id: 'indexer-api-v2-logs',
         name: 'Indexer API V2 Logs',
         link: false,
