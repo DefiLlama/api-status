@@ -169,7 +169,7 @@ while (true) {
 					if (!isFirstRun && lastLog?.t) {
 						const intervalMS = (endpointConfig.interval + 20 / 60) * 60_000 // add 20 seconds to the interval as buffer
 						const lastPulse = lastLog.t;
-						if (endpointStatus.status - lastPulse < intervalMS) {
+						if (endpointStatus.t - lastPulse < intervalMS) {
 							// verboseLog(`\t⏱️ Skipping, last pulse was ${Math.floor((Date.now() - lastPulse) / 1000)} seconds ago.`);
 							return; // Skip if the last pulse was less than the interval
 						}

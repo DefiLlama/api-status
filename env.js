@@ -19,4 +19,6 @@ export default {
   rpcAggWorker: process.env.RPC_AGG_WORKER,
   coinsWebhookUrl: process.env.URGENT_COINS_WEBHOOK,
   proKey: process.env.PRO_API_KEY,
+  jenKey: process.env.JEN_API_KEY,
+  jenURL: process.env.JEN_URL,
 }
