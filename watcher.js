@@ -166,7 +166,6 @@ while (true) {
 					}
 
 					// if it is not first run, we check if it was run recently and skip if it was
-					/* this is not working/skipping too much, fix the bug and enable the block again
 					if (!isFirstRun && lastLog?.t) {
 						const intervalMS = (endpointConfig.interval - 2) * 60_000 // add 2 minutes to the interval as buffer
 						const lastPulse = lastLog.t;
@@ -174,8 +173,7 @@ while (true) {
 							// verboseLog(`\t⏱️ Skipping, last pulse was ${Math.floor((Date.now() - lastPulse) / 1000)} seconds ago.`);
 							return; // Skip if the last pulse was less than the interval
 						}
-					} 
-						*/
+					}
 
 					let start;
 
