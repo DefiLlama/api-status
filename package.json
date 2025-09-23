@@ -1,0 +1,21 @@
+{
+  "name": "api-status-watcher",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A one-file NodeJS server status monitoring/notification tool.",
+  "main": "watcher.js",
+  "scripts": {
+    "start-page": "npx http-server -s -d false ./static",
+    "watcher": "node watcher.js",
+    "start": "npm-run-all --parallel start-page watcher"
+  },
+  "author": "ybouane",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@supercharge/promise-pool": "^3.2.0",
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "http-server": "^14.1.1",
+    "npm-run-all": "^4.1.5"
+  }
+}
