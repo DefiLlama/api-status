@@ -23,5 +23,6 @@ export default {
   proKey: process.env.PRO_API_KEY,
   jenKey: process.env.JEN_API_KEY,
   jenURL: process.env.JEN_URL,
-  llamaRpcKey: process.env.LLAMA_RPC_KEY
+  llamaRpcKey: process.env.LLAMA_RPC_KEY,
+  infraWebhookUrl: process.env.INFRA_WEBHOOK_URL,
 }

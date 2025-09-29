@@ -63,6 +63,7 @@ export const config = {
     getLlamaRpc(),
     getProApi(),
     getJenApi(),
+    getNFTApis(),
   ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
 };
 
@@ -513,6 +514,31 @@ function getPublicSites() {
         id: 'chainlist-rpc-list',
         name: 'Chainlist RPC list',
         url: `https://chainlist.org/rpcs.json`,
+      },
+    ],
+  }
+}
+
+function getNFTApis() {
+  return {
+    id: 'nft',
+    name: 'NFT API',
+    staleCheckInterval: false, // this doesnt change very often
+    interval: 30, // Interval in minutes between each pulse
+    responseTimeGood: 60_000, // In milliseconds, this and below will be green
+    responseTimeWarning: 120_000, // In milliseconds, above this will be red
+    timeout: 240_000, // In milliseconds, requests will be aborted above this
+    discordWebhookUrl: env.infraWebhookUrl, //  to send notifications through discord
+    endpoints: [
+      {
+        id: 'nft-site',
+        name: 'nft collections',
+        url: `https://nft.llama.fi/collections`,
+      },
+      {
+        id: 'nft-royalties',
+        name: 'nft royalties',
+        url: `https://nft.llama.fi/royalties`,
       },
     ],
   }
