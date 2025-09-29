@@ -532,14 +532,19 @@ function getNFTApis() {
     endpoints: [
       {
         id: 'nft-site',
-        name: 'nft collections',
+        name: 'NFT Collections',
         url: `https://nft.llama.fi/collections`,
       },
       {
         id: 'nft-royalties',
-        name: 'nft royalties',
+        name: 'NFT Royalties',
         url: `https://nft.llama.fi/royalties`,
       },
+      {
+        id: 'nft-exchange-volume',
+        name: 'NFT Exchange Volume',
+        url: `https://nft.llama.fi/exchangeVolume`,
+      }
     ],
   }
 }
