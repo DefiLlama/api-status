@@ -50,20 +50,21 @@ export const config = {
       ]
     },
 
-    getInternalApi(),
-    getPublicSites(),
-    getIndexerApi(),
-    getIndexerApiV2(),
-    getDimensionsApi(),
-    getStablecoinApi(),
-    getTvlApi(),
-    getCoinsApi(),
-    getYieldApi(),
-    getRpcAggWorkerEndpoints(),
-    getLlamaRpc(),
-    getProApi(),
-    getJenApi(),
-    getNFTApis(),
+    // getInternalApi(),
+    // getPublicSites(),
+    // getIndexerApi(),
+    // getIndexerApiV2(),
+    // getDimensionsApi(),
+    // getStablecoinApi(),
+    // getTvlApi(),
+    // getCoinsApi(),
+    // getYieldApi(),
+    // getRpcAggWorkerEndpoints(),
+    // getLlamaRpc(),
+    // getProApi(),
+    // getJenApi(),
+    // getNFTApis(),
+    getHyperliquidIndexer(),
   ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
 };
 
@@ -926,5 +927,43 @@ function getJenApi() {
       { job: '(dimensions) fill missing datapoints', time: 2 * DAY, runTimeMin: 5 * MINUTE, needSuccessful: false, },
       { job: '(tvl) update tvl data', time: 2 * HOUR, runTimeMin: 5 * MINUTE, needSuccessful: false, },
     ].map(getItemConfig),
+  }
+}
+
+export function getHourUnixTimestamp() {
+  const timestamp = Math.floor(new Date().getTime() / 1000)
+  const theDay = new Date().toISOString().split('T')[0];
+  let startHourTimestamp = Math.floor(new Date(theDay).getTime() / 1000);
+
+  while (startHourTimestamp <= timestamp - 3600) {
+    startHourTimestamp += 3600;
+  }
+
+  return startHourTimestamp;
+}
+
+function getHyperliquidIndexer() {
+  if (!env.hlIndexer)
+    return null
+
+  const dateString = (new Date()).toISOString().split('T')[0].replace('-', '').replace('-', '')
+  const hourNumber = getHourUnixTimestamp()
+
+  return {
+    id: 'hl-indexer', // optional
+    name: 'Hyperliquid Indexer',
+    endpoints: [
+      {
+        id: 'hourly-data',
+        name: 'Current Hourly Data',
+        link: false,
+        url: `${env.hlIndexer}/v1/data/hourly?date=${dateString}`,
+        customCheck: async ({ jsonContent, endpointStatus }) => {
+          const latestHourlyData = jsonContent.data.find(item => item.timestamp === hourNumber)
+          endpointStatus.contentHash = hashString(String(latestHourlyData.perpsOpenInterestUsd))
+          return latestHourlyData && (Number(latestHourlyData.perpsOpenInterestUsd) > 0) && (Number(latestHourlyData.perpsVolumeUsd) > 0)
+        },
+      },
+    ]
   }
 }
