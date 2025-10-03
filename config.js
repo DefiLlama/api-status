@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import https from 'https';
 const { reImport, hashString } = await import('./util.js')
 let env = await reImport('./env.js')
 
@@ -442,6 +443,60 @@ function getCoinsApi() {
     discordWebhookUrl: env.coinsWebhookUrl, // optional
     endpoints: [
       {
+        id: 'coins-api-update',
+        name: 'Token update count',
+        customCheck: async () => {
+          if (!coinsDB) throw new Error('No coinsDB url')
+          const endpoint = `${env.coinsDB}/coins-timeseries-*/_search`
+          const { data: { aggregations: { uniquePids, adapterBreakdown } } } = await axios.post(endpoint, {
+            "size": 0,
+            "query": {
+              "range": {
+                "ts": {
+                  "gte": "now-80m",
+                  "lte": "now"
+                }
+              }
+            },
+            "aggs": {
+              "uniquePids": {
+                "cardinality": {
+                  "field": "pid"
+                }
+              },
+              "adapterBreakdown": {
+                "terms": {
+                  "field": "adapter",
+                  "size": 11
+                },
+                "aggs": {
+                  "pids": {
+                    "cardinality": {
+                      "field": "pid"
+                    }
+                  }
+                }
+              }
+            }
+          }, {
+            httpsAgent: new https.Agent({ rejectUnauthorized: false })
+          })
+          const adapterMap = {}
+          adapterBreakdown.buckets.forEach(b => {
+            adapterMap[b.key] = b.pids.value
+          })
+
+          const errorMessage = (str) => {
+            throw new Error(str + ` Too few updates: ${str} (in the last 80 minutes)`)
+          }
+          if (uniquePids.value < 2000) errorMessage(`total unique coin updates: ${uniquePids.value}`)
+          if (!adapterMap.coingecko || adapterMap.coingecko < 1000) errorMessage(`coingecko adapter: ${adapterMap.coingecko}`)
+          if (!adapterMap.uniswap || adapterMap.uniswap < 400) errorMessage(`uniswap adapter: ${adapterMap.uniswap}`)
+          if (Object.keys(adapterMap).length < 9) errorMessage(`Too few adapters returned data: ${Object.keys(adapterMap).length}`)
+          return true
+        }
+      },
+      {
         id: 'coins-api-protocols',
         name: 'Get token price',
         url: `${env.coinsBase}/prices/current/${QUERIES.join(',')}`,
@@ -450,28 +505,27 @@ function getCoinsApi() {
       ...defiCoinsEndpoints
     ],
   }
-}
 
+  function getDefiCoinsApi() {
+    const QUERIES = [
+      'ethereum:0xf5e27cce3c82326616784638ef7201fdc242bf89', // Euler V2
+      'arbitrum:0x821cac5cb29c2d9c99c63be153316a479d550d72', // Pendle SY 
+      'hyperliquid:0xc8b6e0acf159e058e22c564c0c513ec21f8a1bf5', // hywstHYPE
+    ]
 
-function getDefiCoinsApi() {
-  const QUERIES = [
-    'ethereum:0xf5e27cce3c82326616784638ef7201fdc242bf89', // Euler V2
-    'arbitrum:0x821cac5cb29c2d9c99c63be153316a479d550d72', // Pendle SY 
-    'hyperliquid:0xc8b6e0acf159e058e22c564c0c513ec21f8a1bf5', // hywstHYPE
-  ]
-
-  return {
-    id: 'defi-coins-api',
-    name: 'Defi Coins API',
-    staleCheckInterval: 3 * ONE_HOUR,
-    endpoints: [
-      {
-        id: 'coins-api-defi-protocols',
-        name: 'Get defi token price',
-        url: `${env.coinsBase}/prices/current/${QUERIES.join(',')}`,
-        customCheck: coinsCheck(QUERIES, 3 * ONE_HOUR)
-      },
-    ],
+    return {
+      id: 'defi-coins-api',
+      name: 'Defi Coins API',
+      staleCheckInterval: 3 * ONE_HOUR,
+      endpoints: [
+        {
+          id: 'coins-api-defi-protocols',
+          name: 'Get defi token price',
+          url: `${env.coinsBase}/prices/current/${QUERIES.join(',')}`,
+          customCheck: coinsCheck(QUERIES, 3 * ONE_HOUR)
+        },
+      ],
+    }
   }
 }
 
