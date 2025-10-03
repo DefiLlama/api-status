@@ -446,7 +446,7 @@ function getCoinsApi() {
         id: 'coins-api-update',
         name: 'Token update count',
         customCheck: async () => {
-          if (!coinsDB) throw new Error('No coinsDB url')
+          if (!env.coinsDB) throw new Error('No coinsDB url')
           const endpoint = `${env.coinsDB}/coins-timeseries-*/_search`
           const { data: { aggregations: { uniquePids, adapterBreakdown } } } = await axios.post(endpoint, {
             "size": 0,
