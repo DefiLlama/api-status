@@ -12,6 +12,7 @@
   "author": "ybouane",
   "license": "Apache-2.0",
   "dependencies": {
+    "@defillama/sdk": "^5.0.172",
     "@supercharge/promise-pool": "^3.2.0",
     "axios": "^1.9.0",
     "dotenv": "^16.5.0",

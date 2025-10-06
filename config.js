@@ -3,6 +3,7 @@ import axios from 'axios';
 import https from 'https';
 const { reImport, hashString } = await import('./util.js')
 let env = await reImport('./env.js')
+import * as sdk from '@defillama/sdk'
 
 const createIndexerClient = (apiKey, baseURL) => axios.create({
   headers: { "x-api-key": apiKey },
@@ -52,13 +53,14 @@ export const config = {
     },
 
     getInternalApi(),
+    getCoinsApi(),
+    getESTests(),
     getPublicSites(),
     getIndexerApi(),
     getIndexerApiV2(),
     getDimensionsApi(),
     getStablecoinApi(),
     getTvlApi(),
-    getCoinsApi(),
     getYieldApi(),
     getRpcAggWorkerEndpoints(),
     getLlamaRpc(),
@@ -1019,5 +1021,198 @@ function getHyperliquidIndexer() {
         },
       },
     ]
+  }
+}
+
+
+function getESTests() {
+
+  async function getAppRuntimeLogs(application) {
+
+    const esClient = sdk.elastic.getClient()
+
+    // fetch successful logs in the last 2 hours, grouped by type and application
+    const { aggregations: { byApplication } } = await esClient.search({
+      index: 'debug-runtime-logs*',
+      body: {
+        "aggs": {
+          "byApplication": {
+            "terms": {
+              "field": "metadata.application.keyword",
+              "order": {
+                "_count": "desc"
+              },
+              "size": 30
+            },
+            "aggs": {
+              "byType": {
+                "terms": {
+                  "field": "metadata.type.keyword",
+                  "order": {
+                    "_count": "desc"
+                  },
+                  "size": 30
+                }
+              }
+            }
+          }
+        },
+        "size": 0,
+        "_source": {
+          "excludes": []
+        },
+        "query": {
+          "bool": {
+            "must": [],
+            "filter": [
+              {
+                "bool": {
+                  "should": [
+                    {
+                      "match": {
+                        "success": true
+                      }
+                    }
+                  ],
+                  "minimum_should_match": 1
+                }
+              },
+              {
+                "range": {
+                  "timestamp": {
+                    gte: 'now-2h', // last 2 hours
+                    lt: 'now'
+                  }
+                }
+              }
+            ],
+            "should": [],
+            "must_not": []
+          }
+        },
+        "stored_fields": [
+          "*"
+        ],
+        "runtime_mappings": {},
+        "script_fields": {},
+        "fields": [
+          {
+            "field": "metadata.execution_ended_at",
+            "format": "date_time"
+          },
+          {
+            "field": "metadata.execution_started_at",
+            "format": "date_time"
+          },
+          {
+            "field": "metadata.expires_at",
+            "format": "date_time"
+          },
+          {
+            "field": "metadata.submitted_at",
+            "format": "date_time"
+          },
+          {
+            "field": "timestamp",
+            "format": "date_time"
+          }
+        ]
+      }
+    });
+    const applicationMap = {};
+    for (const typeBucket of byApplication.buckets) {
+      const { key: application, doc_count, byType } = typeBucket;
+      applicationMap[application] = {
+        count: doc_count,
+        types: {}
+      };
+      for (const typeBucket of byType.buckets) {
+        const { key: type, doc_count: typeCount } = typeBucket;
+        applicationMap[application].types[type] = typeCount;
+      }
+    }
+
+    return applicationMap[application]
+
+    // sample response
+    /*   {
+          "dimensions": {
+            "count": 10014,
+            "types": {
+              "protocol-chain": 10014
+            }
+          },
+          "tvl": {
+            "count": 6066,
+            "types": {
+              "protocol": 5845,
+              "treasury": 195,
+              "entity": 26
+            }
+          },
+          "allium": {
+            "count": 275,
+            "types": {}
+          },
+          "dune": {
+            "count": 69,
+            "types": {}
+          },
+          "cron-task": {
+            "count": 29,
+            "types": {
+              "app-metadata": 8,
+              "dimensions": 8,
+              "tvl-data": 8,
+              "raises": 5
+            }
+          }
+        } */
+
+  }
+
+  return {
+    id: 'es',
+    name: 'ES logs',
+    staleCheckInterval: false, // this doesnt change very often
+    responseTimeGood: 60_000, // In milliseconds, this and below will be green
+    responseTimeWarning: 120_000, // In milliseconds, above this will be red
+    timeout: 240_000, // In milliseconds, requests will be aborted above this
+    endpoints: [
+      {
+        id: 'tvl-runtime-logs',
+        name: 'Tvl Runtime logs',
+        customCheck: async () => {
+          const logs = await getAppRuntimeLogs('tvl')
+          if (!logs) throw new Error('No logs found for tvl')
+          if (logs.count < 1000) throw new Error('Too few logs for tvl: ' + logs.count)
+          return true
+        }
+      },
+      {
+        id: 'dimensions-runtime-logs',
+        name: 'Dimensions Runtime logs',
+        customCheck: async () => {
+          const logs = await getAppRuntimeLogs('dimensions')
+          if (!logs) throw new Error('No logs found for dimensions')
+          if (logs.count < 1000) throw new Error('Too few logs for dimensions: ' + logs.count)
+          return true
+        }
+      },
+      {
+        id: 'cron-task-runtime-logs',
+        name: 'Cron Task Runtime logs',
+        customCheck: async () => {
+          const logs = await getAppRuntimeLogs('cron-task')
+          if (!logs) throw new Error('No logs found for cron-task')
+          if (logs.count < 10) throw new Error('Too few logs for cron-task: ' + logs.count)
+          const checkTypes = ['dimensions', 'tvl-data', 'raises', 'app-metadata']
+          for (const runType of checkTypes) {
+            if (!logs.types[runType] || logs.types[runType] < 2) throw new Error('Too few ' + runType + ' logs for cron-task: ' + (logs.types[runType] || 0))
+          }
+          return true
+        }
+      },
+    ],
   }
 }

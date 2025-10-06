@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// also need to add ELASTICSEARCH_CONFIG to pull logs from ES
+
 export default {
   apiBase: process.env.API_BASE ?? 'https://api.llama.fi',
   coinsBase: process.env.COINS_BASE ?? 'https://coins.llama.fi',
