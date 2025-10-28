@@ -66,6 +66,7 @@ export const config = {
     getLlamaRpc(),
     getProApi(),
     getJenApi(),
+    getJenApiV2(),
     getNFTApis(),
     getHyperliquidIndexer(),
   ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
@@ -979,9 +980,76 @@ function getJenApi() {
       { job: '(coins) Store Defi Coins', time: 2 * HOUR, },
       { job: '(coins) Store Bridge Coins', time: 2 * HOUR, },
       { job: '(coins) Fetch CG Min - under1m (rest)', time: 6 * HOUR, },
-      { job: '(dimensions) pull data - v2', time: 3 * HOUR, runTimeMin: 5 * MINUTE },
+      // { job: '(dimensions) pull data - v2', time: 3 * HOUR, runTimeMin: 5 * MINUTE },
       { job: '(dimensions) fill missing datapoints', time: 2 * DAY, runTimeMin: 5 * MINUTE, needSuccessful: false, },
       { job: '(tvl) update tvl data - v2', time: 2 * HOUR, runTimeMin: 5 * MINUTE, needSuccessful: false, },
+    ].map(getItemConfig),
+  }
+}
+
+function getJenApiV2() {
+  if (!env.jenKey || !env.jenURLV2)
+    return null
+
+  const client = axios.create({
+    auth: {
+      username: env.jenKey.split(':')[0],
+      password: env.jenKey.split(':')[1],
+    },
+    baseURL: env.jenURLV2,
+  })
+  const MINUTE = 60 * 1000
+  const HOUR = 60 * MINUTE
+  const DAY = 24 * HOUR
+
+  const getItemConfig = ({ job, name, time = HOUR, runTimeMin = 0, interval = 30, needSuccessful = true } = {}) => {
+    if (!name) name = job
+    return {
+      id: `jen-${job}`,
+      name,
+      link: false,
+      interval,
+      customCheck: async () => {
+        let runInfos = []
+
+        // pull job run info
+        try {
+          const { data } = await client.get(`/job/${job}/wfapi/runs`)
+          runInfos = data
+        } catch (error) {
+          console.error(error)
+          throw new Error('Unable to fetch data from jenkins')
+        }
+
+
+        // check if the last job run was successful
+        if (needSuccessful) {
+
+          const lastSuccessfulRun = runInfos.find(run => run.status === 'SUCCESS')
+          const minLastSuccessfulRun = +Date.now() - time
+          if (!lastSuccessfulRun) throw new Error('No successful runs found')
+          if (lastSuccessfulRun.startTimeMillis < minLastSuccessfulRun) throw new Error('Last successful run is too old ' + new Date(lastSuccessfulRun.startTimeMillis).toISOString() + `diff: ${minLastSuccessfulRun - lastSuccessfulRun.startTimeMillis}ms`)
+        }
+
+        // check if the jobs ran for the minimum required time
+        if (runTimeMin > 0) {
+          const minJobStartTime = +Date.now() - time
+          const filteredJobs = runInfos.filter(run => run.startTimeMillis > minJobStartTime)
+          if (filteredJobs.length === 0) throw new Error('No jobs found that ran in the last ' + time + 'ms')
+          // check if at least one job in given time period ran over minimum time period
+          if (!filteredJobs.some(run => run.durationMillis > runTimeMin)) throw new Error('No jobs found that ran over minimum time period' + runTimeMin + 'ms')
+        }
+
+        return true
+      },
+    }
+  }
+
+  return {
+    id: 'jen-api-v2',
+    name: 'Jenkins API V2',
+    endpoints: [
+      { job: '(dimensions) pull data - v2', time: 3 * HOUR, runTimeMin: 5 * MINUTE },
     ].map(getItemConfig),
   }
 }
