@@ -30,4 +30,5 @@ export default {
   infraWebhookUrl: process.env.INFRA_WEBHOOK_URL,
   hlIndexer: process.env.LLAMA_HL_INDEXER,
   coinsDB: process.env.COINS_DB_URL,
+  tradfiApiBase: process.env.TRADFI_API_BASE,
 }

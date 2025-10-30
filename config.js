@@ -69,6 +69,7 @@ export const config = {
     getJenApiV2(),
     getNFTApis(),
     getHyperliquidIndexer(),
+    getTradfiDATApi(),
   ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
 };
 
@@ -1064,6 +1065,24 @@ export function getHourUnixTimestamp() {
   }
 
   return startHourTimestamp;
+}
+
+function getTradfiDATApi() {
+  if (!env.tradfiApiBase)
+    return null
+
+  return {
+    id: 'TradFi-api',
+    name: 'TradFi API',
+    endpoints: [
+      {
+        id: 'tradfi-dat-companies',
+        name: 'TradFi DAT Companies',
+        link: false,
+        url: `${env.tradfiApiBase}/v1/companies`
+      },
+    ],
+  }
 }
 
 function getHyperliquidIndexer() {
