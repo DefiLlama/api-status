@@ -1079,7 +1079,7 @@ function getTradfiDATApi() {
         id: 'tradfi-dat-companies',
         name: 'TradFi DAT Companies',
         link: false,
-        url: `${env.tradfiApiBase}/v1/companies`
+        url: `${env.tradfiApiBase}v1/companies`
       },
     ],
   }
