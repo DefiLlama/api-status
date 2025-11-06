@@ -257,7 +257,7 @@ function getIndexerApi() {
         customCheck: async () => {
           const { data } = await axiosIndexerV1.get('/balances', {
             params: {
-              addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50',
+              addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50', chainId: 1, type: 'erc20'
             },
           });
           return !!data.balances
