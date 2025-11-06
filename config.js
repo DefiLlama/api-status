@@ -52,24 +52,24 @@ export const config = {
       ]
     },
 
-    getInternalApi(),
-    getCoinsApi(),
-    getESTests(),
-    getPublicSites(),
+    // getInternalApi(),
+    // getCoinsApi(),
+    // getESTests(),
+    // getPublicSites(),
     getIndexerApi(),
-    getIndexerApiV2(),
-    getDimensionsApi(),
-    getStablecoinApi(),
-    getTvlApi(),
-    getYieldApi(),
-    getRpcAggWorkerEndpoints(),
-    getLlamaRpc(),
-    getProApi(),
-    getJenApi(),
-    getJenApiV2(),
-    getNFTApis(),
-    getHyperliquidIndexer(),
-    getTradfiDATApi(),
+    // getIndexerApiV2(),
+    // getDimensionsApi(),
+    // getStablecoinApi(),
+    // getTvlApi(),
+    // getYieldApi(),
+    // getRpcAggWorkerEndpoints(),
+    // getLlamaRpc(),
+    // getProApi(),
+    // getJenApi(),
+    // getJenApiV2(),
+    // getNFTApis(),
+    // getHyperliquidIndexer(),
+    // getTradfiDATApi(),
   ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
 };
 
@@ -257,7 +257,7 @@ function getIndexerApi() {
         customCheck: async () => {
           const { data } = await axiosIndexerV1.get('/balances', {
             params: {
-              addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50',
+              addresses: '0xbdfa4f4492dd7b7cf211209c4791af8d52bf5c50', chainId: 1, type: 'erc20'
             },
           });
           return !!data.balances
