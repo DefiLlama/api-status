@@ -981,8 +981,8 @@ function getJenApi() {
       { job: '(coins) Store Defi Coins', time: 2 * HOUR, },
       { job: '(coins) Store Bridge Coins', time: 2 * HOUR, },
       { job: '(coins) Fetch CG Min - under1m (rest)', time: 6 * HOUR, },
-      // { job: '(dimensions) pull data - v2', time: 3 * HOUR, runTimeMin: 5 * MINUTE },
-      { job: '(dimensions) fill missing datapoints', time: 2 * DAY, runTimeMin: 5 * MINUTE, needSuccessful: false, },
+      // { job: '(dimensions) pull data - v2', time: 3 * HOUR, runTimeMin: 5 * MINUTE },  // moved to jenkins v2
+      // { job: '(dimensions) fill missing datapoints', time: 2 * DAY, runTimeMin: 5 * MINUTE, needSuccessful: false, },  // moved to jenkins v2
       { job: '(tvl) update tvl data - v2', time: 2 * HOUR, runTimeMin: 5 * MINUTE, needSuccessful: false, },
     ].map(getItemConfig),
   }
@@ -1051,6 +1051,7 @@ function getJenApiV2() {
     name: 'Jenkins API V2',
     endpoints: [
       { job: '(dimensions) pull data - v2', time: 3 * HOUR, runTimeMin: 5 * MINUTE },
+      { job: '(dimensions) fill missing datapoints', time: 2 * DAY, runTimeMin: 5 * MINUTE, needSuccessful: false, },
     ].map(getItemConfig),
   }
 }
