@@ -57,7 +57,7 @@ export const config = {
     getESTests(),
     getPublicSites(),
     getIndexerApi(),
-    // getIndexerApiV2(),
+    getIndexerApiV2(),
     getDimensionsApi(),
     getStablecoinApi(),
     getTvlApi(),
