@@ -824,7 +824,7 @@ function getLlamaRpc() {
     id: 'llama-rpcs',
     name: 'Llama RPCs',
     endpoints: [
-      getEndpoint('ethereum-reth-(new)', env.eth_reth, 'ethereum'),
+      // getEndpoint('ethereum-reth-(new)', env.eth_reth, 'ethereum'),
       getEndpoint('base', env.base_reth, 'base'),
     ],
   }
