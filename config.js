@@ -718,7 +718,7 @@ function getRpcAggWorkerEndpoints() {
   })
 
   // aptos
-  const aptosChainConfigs = ['aptos', 'move'].map(chain => {
+  const aptosChainConfigs = ['aptos'].map(chain => {
     return {
       id: chain,
       name: chain,
