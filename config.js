@@ -1326,15 +1326,9 @@ function getPBApi() {
     endpoints: [
       {
         id: 'PB-no-key',
-        name: 'PB no key',
+        name: 'Healthcheck endpoint',
         link: false,
-        url: `${env.pbApiBase}`,
-        allowErrorResponse: true,
-        customCheck: async ({ jsonContent }) => {
-          return jsonContent.status === 404
-            && JSON.stringify(jsonContent.data) === '{}'
-            && jsonContent.message === 'File not found.'
-        },
+        url: `${env.pbApiBase}/api/health`,
       },
       {
         id: 'PB-no-key-options',
@@ -1356,7 +1350,7 @@ function getAuthApi() {
 
   return {
     id: 'auth-api',
-    name: 'auth API',
+    name: 'Auth API',
     endpoints: [
       {
         id: 'auth-no-key-options',
