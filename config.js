@@ -70,6 +70,8 @@ export const config = {
     getNFTApis(),
     getHyperliquidIndexer(),
     getTradfiDATApi(),
+    getPBApi(),
+    getAuthApi(),
   ].filter(i => !!i && i.endpoints.length), // Filter out empty sites
 };
 
@@ -1307,6 +1309,63 @@ function getESTests() {
           }
           return true
         }
+      },
+    ],
+  }
+}
+
+
+function getPBApi() {
+  if (!env.pbApiBase)
+    return null
+
+  const client = axios.create({  baseURL: env.pbApiBase,})
+  return {
+    id: 'PB-api',
+    name: 'PB API',
+    endpoints: [
+      {
+        id: 'PB-no-key',
+        name: 'PB no key',
+        link: false,
+        url: `${env.pbApiBase}`,
+        allowErrorResponse: true,
+        customCheck: async ({ jsonContent }) => {
+          return jsonContent.status === 404
+            && JSON.stringify(jsonContent.data) === '{}'
+            && jsonContent.message === 'File not found.'
+        },
+      },
+      {
+        id: 'PB-no-key-options',
+        name: 'PB options call (check if service is up)',
+        link: false,
+        customCheck: async () => {
+          const { data, status } = await client.options('/')
+          return status < 300
+        },
+      },
+    ],
+  }
+}
+function getAuthApi() {
+  if (!env.authApiBase)
+    return null
+
+  const client = axios.create({  baseURL: env.authApiBase,})
+
+  return {
+    id: 'auth-api',
+    name: 'auth API',
+    endpoints: [
+      {
+        id: 'auth-no-key-options',
+        name: 'auth options call (check if service is up)',
+        link: false,
+        customCheck: async () => {
+          const { data, status } = await client.options('/user/front-hash')
+          return status === 200
+        },
       },
     ],
   }

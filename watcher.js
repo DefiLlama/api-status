@@ -192,10 +192,10 @@ while (true) {
 							});
 							content = await response.text();
 							await delay(0); // Ensures that the entry was registered.
-
-
+							
+							
 							let perf = performance.getEntriesByType('resource').find(e => e.name.href === endpoint.url); // Find the entry for this request
-
+							
 							if (perf) {
 								endpointStatus.dur = perf.responseEnd - perf.startTime; // total request duration
 								endpointStatus.dns = perf.domainLookupEnd - perf.domainLookupStart; // DNS Lookup
@@ -214,7 +214,7 @@ while (true) {
 							}
 
 							// HTTP Status Check
-							if (!endpoint.validStatus && !response.ok) {
+							if (!endpoint.validStatus && (!response.ok && !endpoint.allowErrorResponse)) {
 								endpointStatus.err = `HTTP Status ${response.status}: ${response.statusText}`;
 							} else if (endpoint.validStatus && ((Array.isArray(endpoint.validStatus) && !endpoint.validStatus.includes(response.status)) || (!Array.isArray(endpoint.validStatus) && endpoint.validStatus != response.status))) {
 								endpointStatus.err = `HTTP Status ${response.status}: ${response.statusText}`;
