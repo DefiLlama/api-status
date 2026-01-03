@@ -1370,8 +1370,8 @@ function getAuthApi() {
           if (status !== 200)
             throw new Error('Status not 200')
 
-          if (typeof data.useHash !== 'string' || data.useHash.length < 7)
-            throw new Error('Invalid useHash value')
+          if (typeof data.userHash !== 'string' || data.userHash.length < 7)
+            throw new Error('Invalid userHash value')
 
           return true
         },
@@ -1381,7 +1381,7 @@ function getAuthApi() {
         name: 'User config',
         link: false,
         customCheck: async () => {
-          const { data, status } = await client.get('/user/front-hash')
+          const { data, status } = await client.get('/user/config')
           if (status !== 200)
             throw new Error('Status not 200')
 
