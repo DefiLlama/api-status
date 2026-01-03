@@ -33,4 +33,5 @@ export default {
   tradfiApiBase: process.env.TRADFI_API_BASE,
   pbApiBase: process.env.PB_API_BASE ?? 'https://pb.llama.fi',
   authApiBase: process.env.AUTH_API_BASE ?? 'https://auth.llama.fi',
+  authApiTestKey: process.env.AUTH_API_TEST_KEY,
 }

@@ -1343,10 +1343,10 @@ function getPBApi() {
   }
 }
 function getAuthApi() {
-  if (!env.authApiBase)
+  if (!env.authApiBase || !env.authApiTestKey)
     return null
 
-  const client = axios.create({  baseURL: env.authApiBase,})
+  const client = axios.create({  baseURL: env.authApiBase, headers: { 'Authorization': `Bearer ${env.authApiTestKey}` } })
 
   return {
     id: 'auth-api',
@@ -1359,6 +1359,36 @@ function getAuthApi() {
         customCheck: async () => {
           const { data, status } = await client.options('/user/front-hash')
           return status === 200
+        },
+      },
+      {
+        id: 'auth-check-hash',
+        name: 'Check user hash',
+        link: false,
+        customCheck: async () => {
+          const { data, status } = await client.get('/user/front-hash')
+          if (status !== 200)
+            throw new Error('Status not 200')
+
+          if (typeof data.useHash !== 'string' || data.useHash.length < 7)
+            throw new Error('Invalid useHash value')
+
+          return true
+        },
+      },
+      {
+        id: 'auth-user-config',
+        name: 'User config',
+        link: false,
+        customCheck: async () => {
+          const { data, status } = await client.get('/user/front-hash')
+          if (status !== 200)
+            throw new Error('Status not 200')
+
+          if (typeof data.DARK_MODE !== 'boolean')
+            throw new Error('Invalid DARK_MODE value')
+
+          return true
         },
       },
     ],
