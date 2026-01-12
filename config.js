@@ -1342,7 +1342,8 @@ function getPBApi() {
     ],
   }
 }
-async function getAuthApi() {
+
+function getAuthApi() {
   if (!env.authApiBase || !env.pbApiBase || !env.pbAuthEmail || !env.pbAuthPassword)
     return null
 
