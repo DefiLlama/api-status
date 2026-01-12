@@ -1319,7 +1319,7 @@ function getPBApi() {
   if (!env.pbApiBase)
     return null
 
-  const client = axios.create({  baseURL: env.pbApiBase,})
+  const client = axios.create({ baseURL: env.pbApiBase, })
   return {
     id: 'PB-api',
     name: 'PB API',
@@ -1342,11 +1342,19 @@ function getPBApi() {
     ],
   }
 }
-function getAuthApi() {
-  if (!env.authApiBase || !env.authApiTestKey)
+async function getAuthApi() {
+  if (!env.authApiBase || !env.pbApiBase || !env.pbAuthEmail || !env.pbAuthPassword)
     return null
 
-  const client = axios.create({  baseURL: env.authApiBase, headers: { 'Authorization': `Bearer ${env.authApiTestKey}` } })
+  const getAuthClient = async () => {
+    const pbClient = axios.create({ baseURL: env.pbApiBase })
+    const authResponse = await pbClient.post('/api/collections/users/auth-with-password', {
+      identity: env.pbAuthEmail,
+      password: env.pbAuthPassword,
+    })
+    const client = axios.create({ baseURL: env.authApiBase, headers: { 'Authorization': `Bearer ${authResponse.data.token}` } })
+    return client
+  }
 
   return {
     id: 'auth-api',
@@ -1357,6 +1365,7 @@ function getAuthApi() {
         name: 'auth options call (check if service is up)',
         link: false,
         customCheck: async () => {
+          const client = await getAuthClient()
           const { data, status } = await client.options('/user/front-hash')
           return status === 200
         },
@@ -1366,6 +1375,7 @@ function getAuthApi() {
         name: 'Check user hash',
         link: false,
         customCheck: async () => {
+          const client = await getAuthClient()
           const { data, status } = await client.get('/user/front-hash')
           if (status !== 200)
             throw new Error('Status not 200')
@@ -1381,6 +1391,7 @@ function getAuthApi() {
         name: 'User config',
         link: false,
         customCheck: async () => {
+          const client = await getAuthClient()
           const { data, status } = await client.get('/user/config')
           if (status !== 200)
             throw new Error('Status not 200')
