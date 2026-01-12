@@ -1328,6 +1328,7 @@ function getPBApi() {
         id: 'PB-no-key',
         name: 'Healthcheck endpoint',
         link: false,
+        staleCheckInterval: false,
         url: `${env.pbApiBase}/api/health`,
       },
       {
