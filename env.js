@@ -32,6 +32,7 @@ export default {
   coinsDB: process.env.COINS_DB_URL,
   tradfiApiBase: process.env.TRADFI_API_BASE,
   pbApiBase: process.env.PB_API_BASE ?? 'https://pb.llama.fi',
+  pbAuthEmail: process.env.PB_AUTH_EMAIL,
+  pbAuthPassword: process.env.PB_AUTH_PASSWORD,
   authApiBase: process.env.AUTH_API_BASE ?? 'https://auth.llama.fi',
-  authApiTestKey: process.env.AUTH_API_TEST_KEY,
 }
