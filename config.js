@@ -508,7 +508,19 @@ function getCoinsApi() {
         url: `${env.coinsBase}/prices/current/${QUERIES.join(',')}`,
         customCheck: coinsCheck(QUERIES, ONE_HOUR)
       },
-      ...defiCoinsEndpoints
+      ...defiCoinsEndpoints,
+      
+      // block/:chain/:timestamp
+      {
+        id: 'coins-api-chain-blocks',
+        name: 'Get chain block',
+        url: `${env.coinsBase}/block/ethereum/${Math.round(new Date().getTime() / 1000) - 600}`, // get block last 10 minutes
+        customCheck: async ({ jsonContent }) => {
+          const { height, timestamp } = jsonContent;
+
+          return Number(height) > 0 && Number(timestamp) > 0;
+        }
+      },
     ],
   }
 
