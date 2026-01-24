@@ -1335,6 +1335,7 @@ function getPBApi() {
   return {
     id: 'PB-api',
     name: 'PB API',
+    discordWebhookUrl: env.teamsWebhookUrl,
     endpoints: [
       {
         id: 'PB-no-key',
@@ -1373,6 +1374,7 @@ function getAuthApi() {
   return {
     id: 'auth-api',
     name: 'Auth API',
+    discordWebhookUrl: env.teamsWebhookUrl,
     endpoints: [
       {
         id: 'auth-no-key-options',
