@@ -527,7 +527,7 @@ function getCoinsApi() {
   function getDefiCoinsApi() {
     const QUERIES = [
       'ethereum:0xd8b27cf359b7d15710a5be299af6e7bf904984c2', // Euler V2
-      'arbitrum:0x1ef58a7af39883cc95c59a2c106b726c64c2ecc6', // Pendle PT 
+      'ethereum:0xb327ead785574789bf4f7ef32bcdeae9513983d1', // Pendle PT 
       'hyperliquid:0xc8b6e0acf159e058e22c564c0c513ec21f8a1bf5', // hywstHYPE
     ]
 
