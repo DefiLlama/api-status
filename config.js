@@ -896,7 +896,7 @@ function getProApi() {
         staleCheckInterval: false,
         url: `https://pro-api.llama.fi/usage/${env.proKey}`,
         customCheck: async ({ jsonContent }) => {
-          return jsonContent.creditsLeft > 10
+          return jsonContent.hasOwnProperty('creditsLeft') && typeof jsonContent.creditsLeft === 'number'
         },
       },
       {
